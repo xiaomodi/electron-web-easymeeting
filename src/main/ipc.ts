@@ -1,0 +1,341 @@
+import { ipcMain, BrowserWindow, IpcMainEvent, IpcMainInvokeEvent, desktopCapturer, NativeImage, shell, dialog } from 'electron'
+import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { getWindow, setWindow, removeWindow, windowManage, type WindowManage } from './windowProxy'
+import { initWs, logout } from './wsClient'
+import { startRecording, stopRecording } from './ffmpeg'
+import { saveSetting, getSetting } from './setting'
+import { join } from 'path'
+import icon from '../../resources/icon.png?asset'
+import store from './store'
+
+// 获取窗口大小
+export const onWindowControl = () => {
+  ipcMain.on('window-control', (e: IpcMainEvent, type: string) => {
+    const webContents = e.sender
+    const win = BrowserWindow.fromWebContents(webContents)
+    switch(type) {
+      case 'minimize':
+        win?.minimize()
+        break
+      case 'fullscreen':
+        if (win?.isFullScreen()) {
+          win?.setFullScreen(false)
+          win?.setWindowButtonVisibility(false)
+        } else {
+          win?.setFullScreen(true)
+          win?.setWindowButtonVisibility(true)
+        }
+        break
+      case 'close':
+        win?.close()
+        break
+    }
+  })
+}
+
+// 登陆成功
+interface LoginSuccess {
+  userInfo: any,
+  wsUrl: string
+}
+export const onLoginSuccess = () => {
+  ipcMain.handle("login-success", (e: IpcMainInvokeEvent, {userInfo, wsUrl}: LoginSuccess) => {
+    // 去获取主进程窗口
+    const mainWindow = getWindow('main')
+    mainWindow.setResizable(true)
+    mainWindow.setMinimumSize(720, 480)
+    mainWindow.setSize(720, 480)
+    console.log("userInfo", userInfo)
+    console.log("wsUrl", wsUrl)
+
+    //  TODO: 保存用户信息
+    // store.initUserId(userInfo.userId)
+    // store.setData('userInfo', userInfo)
+    // TODO: 初始化ws
+    // initWs(`${wsUrl}${userInfo.token}`)
+  })
+}
+
+// 退出登陆
+export const onLogout = () => {
+  ipcMain.handle("logout", (e: IpcMainInvokeEvent) => {
+    logout()
+  })
+}
+
+// 获取屏幕源
+type SourceType = "screen" | "window"
+
+type ThumnailSizeOption = {
+  width?: number,
+  height?: number
+}
+
+interface GetScreenSource {
+  types: SourceType[],
+  thumnailSize?: ThumnailSizeOption,
+  fetchWindowIcons?: boolean
+}
+
+interface SourceList {
+  name: string,
+  id: string,
+  thumbnail: NativeImage,
+  display_id: string,
+  appIcon: NativeImage | null
+}
+
+interface MapList {
+  id: string,
+  name: string,
+  thumbnail: string,
+  display_id: string
+}
+
+function fileteSource(sourceList: SourceList[]): SourceList[] {
+  return sourceList.filter(item => {
+    const size = item.thumbnail.getSize()
+    return size.width > 10 && size.height > 10
+  })
+}
+
+function mapSource(sourceList: SourceList[]): MapList[] {
+  return sourceList.map(item => {
+    return {
+      id: item.id,
+      name: item.name,
+      thumbnail: item.thumbnail.toDataURL(),
+      display_id: item.display_id
+    }
+  })
+}
+
+export const onGetScreenSource = (): void => {
+  ipcMain.handle("get-screen-source", async (e: IpcMainInvokeEvent, params: GetScreenSource) => {
+    let source: SourceList[] = await desktopCapturer.getSources(params)
+    let sourceList: SourceList[] = fileteSource(source)
+    let screenSourceList: MapList[] = mapSource(sourceList)
+    return screenSourceList
+  })
+}
+
+
+// 开始录制
+interface StartRecordParams {
+  displayId: string,
+  mic?: string,
+  screenIndex: number
+}
+export const onStartRecord = (): void => {
+  ipcMain.handle("start_record", (e: IpcMainInvokeEvent, params: StartRecordParams) => {
+    const sender = e.sender
+    const displayId = params.displayId
+    const mic = params.mic
+    const screenIndex = params.screenIndex
+    startRecording(sender, displayId, mic, screenIndex)
+  })
+}
+
+
+// 停止录制
+export const onStopRecord = (): void => {
+  ipcMain.handle("stop_record", () => {
+    stopRecording()
+  })
+}
+
+// 打开文件
+interface OpenFileParams {
+  localFilePath: string,
+  folder?: boolean
+}
+export const onOpenFile = (): void => {
+  ipcMain.handle("open_file", (e: IpcMainInvokeEvent, {localFilePath, folder = false}: OpenFileParams) => {
+    if (folder) {
+      shell.openPath(localFilePath)  // 直接打开视频文件
+    } else {
+      shell.showItemInFolder(localFilePath) // 打开视频文件所在文件夹
+    }
+  })
+}
+
+// 监听设置中的内容是否发生变化
+interface SettingFormData {
+  openVideo: boolean,
+  openMicrophone: boolean,
+  themeValue: string,
+  filePath: string
+}
+export const onSaveSetting = (): void => {
+  ipcMain.handle("setting-save", (e: IpcMainInvokeEvent, params: SettingFormData) => {
+    saveSetting(params)
+  })
+}
+
+// 获取配置文件
+export const onGetSetting = () => {
+  ipcMain.handle("setting-get", (e: IpcMainInvokeEvent) => {
+    return getSetting()
+  })
+}
+
+// 打开文件
+export const onChangeFilePath = () => {
+  ipcMain.handle("change-file-path", (e: IpcMainInvokeEvent, {localFilePath}) => {
+    const option = {
+      defaultPath: localFilePath,
+      properties: ["openDirectory"] as Array<"openDirectory">
+    }
+    let result = dialog.showOpenDialogSync(option)
+    if(!result) {
+      return
+    }
+    return result[0]
+  })
+}
+
+// 打开快速会议窗口
+type DataType = {
+  addType: string,
+  screenId: string
+}
+
+interface OpenQuickMeetingParams {
+  title: string,
+  windowId: string,
+  path: string,
+  data: DataType,
+  width: number,
+  height: number,
+  maximizable: boolean
+}
+export const onOpenWindow = () => {
+  ipcMain.handle("open-quick-meeting-window", (e: IpcMainInvokeEvent, params: OpenQuickMeetingParams) => {
+    const {title, windowId, path, data, width, height, maximizable} = params
+    openWindow({
+      windowId,
+      title,
+      path,
+      width,
+      height,
+      data,
+      maximizable
+    })
+  })
+}
+
+// 打开新窗口(公共方法)
+interface OpenWindowParams {
+  windowId: string,
+  title: string,
+  path: string,
+  width: number,
+  height: number,
+  data: DataType,
+  maximizable: boolean
+}
+const openWindow = ({windowId, title, path, width = 960, height = 720, data, maximizable = false}: OpenWindowParams) => {
+  let newWindow: BrowserWindow = getWindow(windowId)
+  const paramsArray: string[] = []
+  if (data && Object.keys(data).length) {
+    path = path.endsWith("?") ? path : `${path}?`
+    for(let [key, value] of Object.entries(data)) {
+      paramsArray.push(`${key}=${encodeURIComponent(value)}`)
+    }
+    path = `${path}${paramsArray.join("&")}`
+  }
+  if (!newWindow) {
+    newWindow = new BrowserWindow({
+      width,
+      height,
+      minHeight: height,
+      minWidth: width,
+      show: false,
+      autoHideMenuBar: true,
+      frame: false,
+      transparent: false,
+      maximizable,
+      title,
+      ...(process.platform === 'linux' ? { icon } : {}),
+      webPreferences: {
+        preload: join(__dirname, '../preload/index.js'),
+        sandbox: false
+      }
+    })
+    setWindow(windowId, newWindow) // 设置窗口
+
+    newWindow.webContents.openDevTools()
+
+    newWindow.on('ready-to-show', () => {
+      newWindow.show()
+    })
+
+    newWindow.on("close", () => {
+      // TODO 关闭会议窗口
+      // TODO 会议01 24分钟时候
+    })
+
+    newWindow.on("closed", () => { // 用户又可能直接通过导航栏关闭窗口所以需要监听并告诉渲染进程
+      closeWindow(windowId)
+      removeWindow(windowId)
+    })
+
+    newWindow.on("blur", () => {
+      // console.log("窗口已经失焦")
+      newWindow.webContents.send("window-blur")
+    })
+
+    newWindow.on("focus", () => {
+      // console.log("窗口已经聚焦")
+      newWindow.webContents.send("window-focus")
+    })
+
+    newWindow.on("enter-full-screen", () => {
+      newWindow.webContents.send("window-fullscreen", true)
+    })
+
+    newWindow.on("leave-full-screen", () => {
+      newWindow.webContents.send("window-fullscreen", false)
+    })
+
+    newWindow.on("maximize", () => {
+      // console.log("窗口已经聚焦")
+      newWindow.webContents.send("new-window-max", true)
+    })
+
+    newWindow.on("unmaximize", () => {
+      // console.log("窗口已经聚焦")
+      newWindow.webContents.send("new-window-unmax", true)
+    })
+  } else {
+    newWindow.show()
+    newWindow.setSkipTaskbar(false) // 在任务栏不显示
+  }
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    // !! 跳转路由这里需要修改
+    newWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/index.htnl#${path}`)
+  } else {
+    // !! 跳转路由这里需要修改
+    newWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash: path })
+  }
+}
+
+const closeWindow = (windowId: string) => {
+  const mainWindow = getWindow("main")
+  if(mainWindow) {
+    mainWindow.webContents.send("close-window", { windowId })
+  }
+}
+
+// 监听主题切换
+type ThemeType = "light" | "dark"
+export const onThemeChange = () => {
+  ipcMain.handle("theme-changed", (e: IpcMainInvokeEvent, theme: ThemeType) => {
+    const windows: WindowManage = windowManage
+    for (let [windowId, sender] of Object.entries(windows)) {
+      if (windowId !== 'main') {
+       (sender as BrowserWindow).webContents.send('mainWindow-theme-changed', theme)
+      }
+    }
+  })
+}
