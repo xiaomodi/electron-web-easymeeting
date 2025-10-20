@@ -78,12 +78,14 @@ const contactsList = ref([
   {
     nickName: "测试数据",
     id: "123",
-    state: ""
+    state: "",
+    userId: ""
   },
   {
     nickName: "试数据",
     id: "1234",
-    state: ""
+    state: "",
+    userId: ""
   },
   // {
   //   nickName: "测试数据",

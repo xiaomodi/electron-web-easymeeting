@@ -50,7 +50,7 @@
 <script lang='ts' setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { Loading, ArrowLeft } from "@element-plus/icons-vue"
-import Setting from './components/Record_Setting/Record_Setting.vue'
+import Setting from './components/Record_Setting/Record_setting.vue'
 import Choice from './components/Record_Choice/Record_Choice.vue'
 
 // 录制状态：
@@ -78,9 +78,9 @@ onMounted(() => {
 })
 
 const formatTime = computed<string>(() => {
-  const hour: string = addZero(Math.floor(recordTime.value / 3600))
-  const minute: number = addZero(Math.floor((recordTime.value - hour * 3600) / 60))
-  const second: number = addZero(Math.floor(recordTime.value - hour * 3600 - minute * 60))
+  const hour: number = +addZero(Math.floor(recordTime.value / 3600))
+  const minute: number = +addZero(Math.floor((recordTime.value - hour * 3600) / 60))
+  const second: number = +addZero(Math.floor(recordTime.value - hour * 3600 - minute * 60))
   return `${hour}:${minute}:${second}`;
 })
 

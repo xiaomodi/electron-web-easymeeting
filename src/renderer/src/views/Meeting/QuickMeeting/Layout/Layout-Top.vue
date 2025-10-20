@@ -27,7 +27,7 @@ import { User } from '@element-plus/icons-vue'
 import Avatar from '@/components/Avatar/Avatar.vue'
 
 const props = defineProps<{
-  mumberList: number
+  mumberList: any[]
 }>()
 
 </script>

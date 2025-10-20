@@ -103,11 +103,6 @@ function handleClickFull(): void {
   handleWindowType("window-control", WindowType.FULL)
 }
 
-function handleDoubleClick(): void {
-  console.log("双击事件")
-}
-
-
 </script>
 
 <style lang="scss" scoped>

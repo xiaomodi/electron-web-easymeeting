@@ -72,7 +72,7 @@ import { ref, reactive, computed } from 'vue'
 import { Message, Unlock, CircleCheck, User } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { login } from '@/service/service'
-import titleBar from "@/components/TitleBar/titleBar.vue"
+import titleBar from "@/components/titleBar/titleBar.vue"
 import BackHeader from '@/components/BackHeader/BackHeader.vue'
 import { useUserInfoStore } from '@/store/userInfo'
 

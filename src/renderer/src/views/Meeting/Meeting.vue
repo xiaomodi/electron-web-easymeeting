@@ -11,13 +11,7 @@
           </div>
           预定会议
         </div>
-        <div class="meeting_left_content_item" @mouseover="handleOnmouseOver('share')" @mouseleave="handleOnmouseLeave('share')">
-          <div class="meeting_left_content_item_icon">
-            <img v-show="shareAction === ''" src="./iconfont/gongxiangpingmu.png" alt="">
-            <img v-show="shareAction === 'share'" src="./iconfont/gongxiangpingmu1.png" style="width: 33px;" alt="">
-          </div>
-          共享屏幕
-        </div>
+        <ShareScreenMeeting />
       </div>
     </div>
     <div class="meeting_right">
@@ -48,11 +42,12 @@
 </template>
 
 <script lang='ts' setup>
-import { ref, reactive, onMounted, computed, onUnmounted } from 'vue'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowRight } from '@element-plus/icons-vue' 
 import JoinMeeting from './JoinMeeting/JoinMeeting.vue'
 import QuickMeeting from './QuickMeeting/QuickMeeting_Icon.vue'
+import ShareScreenMeeting from './ShareScreenMeeting/ShareScreenMeeting.vue'
 
 const router = useRouter()
 
@@ -63,7 +58,7 @@ const shareAction = ref<string>("");
 const month = ref<number>(1);
 const day = ref<number>(1);
 const week = ref<number>(0)
-let dateInterval = ref<NodeJS.Timeout>()
+let dateInterval = ref<NodeJS.Timeout | null>()
 const meetingList = ref<any[]>([])
 
 onMounted(() => {
@@ -72,7 +67,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  clearInterval(dateInterval.value)
+  clearInterval(dateInterval.value!)
 })
 
 const getDay = computed<string>(() => {
@@ -91,6 +86,8 @@ const getDay = computed<string>(() => {
       return "周五";
     case 6:
       return "周六";
+    default:
+      return "";
   }
 })
 
@@ -102,7 +99,7 @@ function initDate(): void {
 }
 
 function getDate(): void {
-  dateInterval = setInterval(() => {
+  dateInterval.value = setInterval(() => {
    initDate()
   }, 1000)
 }

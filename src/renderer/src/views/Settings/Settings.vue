@@ -87,7 +87,7 @@ function handleSaveSetting(): void {
   window.electron.ipcRenderer.invoke("setting-save", {...settingFormData.value})
 } 
 
-async function getSetting(): void {
+async function getSetting(): Promise<any> {
   const settingData = await window.electron.ipcRenderer.invoke("setting-get")
   settingFormData.value = settingData
 }

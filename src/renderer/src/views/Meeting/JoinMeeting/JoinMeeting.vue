@@ -7,7 +7,7 @@
       </div>
       加入会议
     </div>
-    <Dialog v-model="joinMeetingDialog" title="加入会议" width="450" showFooter>
+    <Dialog v-model="joinMeetingDialog" :close="handleClearFormData" title="加入会议" width="450" showFooter>
       <div class="dialog_body">
         <div class="dialog_item">
           <div class="label necessary">会议号</div>
@@ -24,13 +24,13 @@
         <div class="dialog_item">
           <div class="label">会议密码</div>
           <div class="content">
-            <el-radio-group v-model="joinMeetingType">
+            <el-radio-group v-model="formData.joinMeetingType">
               <el-radio value="0">免密入会</el-radio>
               <el-radio value="1">密码入会</el-radio>
             </el-radio-group>
           </div>
         </div>
-         <div class="dialog_item" v-show="joinMeetingType == '1'">
+         <div class="dialog_item" v-show="formData.joinMeetingType == '1'">
           <div class="label"></div>
           <div class="content">
             <el-input v-model="formData.meetingPassword" placeholder="请输入会议密码" clearable/>
@@ -52,15 +52,16 @@ import { Dialog } from '@/components'
 interface FormData {
   meetingId: string,
   meetingName: string,
+  joinMeetingType: "0" | "1",
   meetingPassword?: string,
 }
 
 const addAction = ref<boolean>(false)
 const joinMeetingDialog = ref<boolean>(false)
-const joinMeetingType = ref<string>("0")
 const formData = reactive({
   meetingId: "",
   meetingName: "",
+  joinMeetingType: "0",
   meetingPassword: "",
 })
 
@@ -83,6 +84,16 @@ function handleClickJoinMeeting(): void {
 
 function handleClickJoinMeetingRoom():void {
   joinMeetingDialog.value = false
+}
+
+function handleClearFormData(): void {
+  Object.keys(formData).forEach(key => {
+    if (key === 'joinMeetingType') {
+      formData[key] = "0"
+    } else {
+      formData[key] = ""
+    }
+  })
 }
 
 </script>

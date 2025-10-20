@@ -8,7 +8,7 @@ import { ref, reactive, defineProps, withDefaults, computed } from 'vue'
 
 interface UserInfo {
   nickName: string,
-  userId: string | number,
+  userId: string | undefined,
 }
 const props = withDefaults(defineProps<{
   userInfo: UserInfo,
@@ -18,7 +18,7 @@ const props = withDefaults(defineProps<{
 })
 
 const fontSize = computed<string>(() => {
-  const matchs = props.width.match(/\d+/g)
+  const matchs = props.width.toString().match(/\d+/g)
   if (matchs && matchs.length > 0) {
     return `${+matchs[0] * 0.45}px`
   }
@@ -26,7 +26,7 @@ const fontSize = computed<string>(() => {
 })
 
 const width = computed<string>(() => {
-  return props.width
+  return props.width.toString()
 })
 
 

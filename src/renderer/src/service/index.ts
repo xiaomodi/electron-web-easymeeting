@@ -1,28 +1,45 @@
-import axios from 'axios'
+import axios, { AxiosInstance } from 'axios'
+import { ElLoading, ElMessage, type LoadingInstance  } from 'element-plus'
+import { getLocalStorage } from '@/utils/localStorage'
 
-export const service = axios.create({
+let loading : LoadingInstance | null = null
+const loadingConfig = {
+  lock: true,
+  text: '加载中...',
+  background: 'rgba(255, 255, 255, 0.8)',
+}
+export const service: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_BASE_URL,
   timeout: 5000
 })
 
 service.interceptors.request.use(
   config => {
-    console.log("config", config)
+    loading = ElLoading.service(loadingConfig)
+    config.headers
+      .set("Content-Type", "application/json")
+      .set("X-Requested-With", "XMLHttpRequest")
+    const token: string = getLocalStorage("token")
+    if (token) {
+      config.headers.set("Authorization", `Bearer ${token}`)
+    }
     return config
   },
   error => {
-    console.log("error", error)
+    loading?.close()
     return Promise.reject(error)
   }
 )
 
 service.interceptors.response.use(
   response => {
-    console.log("response", response)
-    return response
+    loading?.close()
+    if (response.status === 200 && response.data && response.data.code === 200) {
+      return response.data
+    }
+    return ElMessage.error(response.data.info || '请求失败')
   },
   error => {
-    console.log("error", error)
     return Promise.reject(error)
   }
 )

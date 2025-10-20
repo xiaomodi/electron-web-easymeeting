@@ -5,6 +5,7 @@ import { initWs, logout } from './wsClient'
 import { startRecording, stopRecording } from './ffmpeg'
 import { saveSetting, getSetting } from './setting'
 import { join } from 'path'
+import { type LoginSuccessType, GetScreenSource, SourceList, MapList, StartRecordParams, SettingFormData } from './main_type'
 import icon from '../../resources/icon.png?asset'
 import store from './store'
 
@@ -34,12 +35,8 @@ export const onWindowControl = () => {
 }
 
 // 登陆成功
-interface LoginSuccess {
-  userInfo: any,
-  wsUrl: string
-}
 export const onLoginSuccess = () => {
-  ipcMain.handle("login-success", (e: IpcMainInvokeEvent, {userInfo, wsUrl}: LoginSuccess) => {
+  ipcMain.handle("login-success", (e: IpcMainInvokeEvent, {userInfo, wsUrl}: LoginSuccessType) => {
     // 去获取主进程窗口
     const mainWindow = getWindow('main')
     mainWindow.setResizable(true)
@@ -64,34 +61,6 @@ export const onLogout = () => {
 }
 
 // 获取屏幕源
-type SourceType = "screen" | "window"
-
-type ThumnailSizeOption = {
-  width?: number,
-  height?: number
-}
-
-interface GetScreenSource {
-  types: SourceType[],
-  thumnailSize?: ThumnailSizeOption,
-  fetchWindowIcons?: boolean
-}
-
-interface SourceList {
-  name: string,
-  id: string,
-  thumbnail: NativeImage,
-  display_id: string,
-  appIcon: NativeImage | null
-}
-
-interface MapList {
-  id: string,
-  name: string,
-  thumbnail: string,
-  display_id: string
-}
-
 function fileteSource(sourceList: SourceList[]): SourceList[] {
   return sourceList.filter(item => {
     const size = item.thumbnail.getSize()
@@ -121,11 +90,6 @@ export const onGetScreenSource = (): void => {
 
 
 // 开始录制
-interface StartRecordParams {
-  displayId: string,
-  mic?: string,
-  screenIndex: number
-}
 export const onStartRecord = (): void => {
   ipcMain.handle("start_record", (e: IpcMainInvokeEvent, params: StartRecordParams) => {
     const sender = e.sender
@@ -160,12 +124,6 @@ export const onOpenFile = (): void => {
 }
 
 // 监听设置中的内容是否发生变化
-interface SettingFormData {
-  openVideo: boolean,
-  openMicrophone: boolean,
-  themeValue: string,
-  filePath: string
-}
 export const onSaveSetting = (): void => {
   ipcMain.handle("setting-save", (e: IpcMainInvokeEvent, params: SettingFormData) => {
     saveSetting(params)

@@ -27,16 +27,17 @@
 <script lang='ts' setup>
 import { ref, reactive, defineProps, withDefaults, defineEmits } from 'vue'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: boolean, // 是否显示
   confirmBtnDisable?: boolean, // 确定按钮是否禁用
-  showClose: boolean,
-  title: string,
-  width: string,
-  showFooter: boolean,
-  footerCancelText: string,
-  footerConfirmText: string,
-  draggable: boolean
+  showClose?: boolean,
+  title?: string,
+  width?: string,
+  showFooter?: boolean,
+  footerCancelText?: string,
+  footerConfirmText?: string,
+  draggable?: boolean,
+  close?: (...args: any[]) => void
 }>(), {
   title: 'titles',
   showClose: true,
@@ -51,12 +52,11 @@ withDefaults(defineProps<{
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
   (e: 'confirm'): void
-  (e: 'cancel'): void
 }>()
 
 function handleClose(): void {
   emit("update:modelValue", false)
-  emit("cancel")
+  props.close?.()
 }
 
 function handleClickConfirm(): void {
@@ -67,6 +67,13 @@ function handleClickConfirm(): void {
 
 <style lang="scss" scoped>
 .dialog_wrapper {
+  &:deep(.el-dialog) {
+    margin: 0 !important;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
   &:deep(.el-overlay ,el-modal-dialog) {
     -webkit-app-region: no-drag;
   }

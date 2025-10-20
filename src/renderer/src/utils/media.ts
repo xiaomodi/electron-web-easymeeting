@@ -71,7 +71,7 @@ let screamStream: MediaStreamType = null // 获取的屏幕流(共享屏幕的�
  * @param cameraOpen 摄像头是否打开
  * @returns localStream 本地流
  */
-export const initStream = (micEnable: MediaDeviceInfo, cameraEnable: MediaStream, micOpen: boolean, cameraOpen: boolean, screenId: string): Promise<MediaStreamType> => {
+export const initStream = (micEnable: MediaDeviceInfo | null, cameraEnable: MediaStream | null, micOpen: boolean, cameraOpen: boolean, screenId: string): Promise<MediaStreamType> => {
   return new Promise((resolve, reject) => {
     nextTick(async () => {
       let localStream: MediaStreamType = new MediaStream() // 本地流(最终页面上看到的流)

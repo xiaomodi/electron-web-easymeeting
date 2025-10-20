@@ -15,10 +15,10 @@
         @click="handleClickMenuItem(item)">
         <el-badge is-dot :offset="[6, 0]" class="item">
           <el-icon>
-            <component :is="item.meta.icon" />
+            <component :is="item.meta?.icon" />
           </el-icon>
         </el-badge>
-        {{ item.meta.name }}
+        {{ item.meta?.name }}
       </div>
     </div>
     <div class="menu_bottom">
@@ -38,7 +38,7 @@
 </template>
 
 <script lang='ts' setup>
-import { ref, reactive, computed, onMounted, type computedRef } from 'vue'
+import { ref, reactive, computed, onMounted, type ComputedRef } from 'vue'
 import { Message, Setting, User } from '@element-plus/icons-vue'
 import { useRouter, useRoute, type RouteRecordRaw } from 'vue-router'
 import { routerList } from '@/router'
@@ -46,31 +46,31 @@ import { routerList } from '@/router'
 const router = useRouter()
 const route = useRoute()
 
-const action = ref<string>("Meeting")
+const action = ref<string>("")
 
 onMounted(() => {
   getRoute()
 })
 
-const menuList:computedRef<RouteRecordRaw[]> = computed(() => {
-  let list = []
+const menuList:ComputedRef<RouteRecordRaw[]> = computed(() => {
+  let list: RouteRecordRaw[] = []
   routerList.forEach(item => {
     if (item.name === "Home") {
-      action.value = item.children[0].name ?? ""
+      action.value = item.children?.length ? String(item.children[0].name ?? "") : ""
       list = item.children ?? []
     }
   })
-  list = list.filter(item => !["Setting"].includes(item.name))
+  list = list.filter(item => !["Setting"].includes(String(item.name ?? "")))
   return list
 })
 
 function getRoute() {
   const actionRoute = route.name
-  action.value = actionRoute
+  action.value = String(actionRoute ?? "")
 }
 
-function handleClickMenuItem(item: string) {
-  action.value = item.name
+function handleClickMenuItem(item: RouteRecordRaw) {
+  action.value = String(item.name ?? "")
   router.push(item.path)
 }
 

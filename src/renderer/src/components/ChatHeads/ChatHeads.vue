@@ -1,6 +1,6 @@
 <template>
   <img v-if="userInfo.userId" :src="userInfo.userId" class="user_icon image" alt="">
-  <div v-else class="user_icon none">{{ userInfo.nickName.substr(0, 1) }}</div>
+  <div v-else class="user_icon none">{{ userInfo.nickName.substring(0, 1) }}</div>
 </template>
 
 <script lang='ts' setup>
@@ -8,7 +8,7 @@ import { ref, reactive, defineProps, withDefaults } from 'vue'
 
 interface UserInfo {
   nickName: string,
-  userId: string | number,
+  userId: string | undefined,
 }
 const props = withDefaults(defineProps<{
   userInfo: UserInfo,

@@ -2,8 +2,8 @@
   <div class="wrapper">
     <div
       class="meeting_left_content_item" 
-      @mouseover="handleOnmouseOver('quick')" 
-      @mouseleave="handleOnmouseLeave('quick')" 
+      @mouseover="handleOnmouseOver()" 
+      @mouseleave="handleOnmouseLeave()" 
       @click="handleClickQuickMeeting">
       <div class="meeting_left_content_item_icon">
         <img v-show="quickAction" src="../iconfont/kuaisuhuiyi1.png" style="width: 30px;" alt="">
@@ -11,7 +11,7 @@
       </div>
       快速会议
     </div>
-   <Dialog v-model="quickMeetingDialog" :confirmBtnDisable="quickMeetForm.meetingSubject.length == 0" title="快速会议" width="400" showFooter @confirm="handleClickConfirm" @cancel="handleClickCancel">
+   <Dialog v-model="quickMeetingDialog" :close="handleClearFormData" :confirmBtnDisable="quickMeetForm.meetingSubject.length == 0" title="快速会议" width="400" showFooter @confirm="handleClickConfirm" @cancel="handleClickCancel">
       <div class="quick_meeting_content">
         <div class="meeting_content_item">
           <p class="title top">会议号</p>
@@ -77,16 +77,15 @@ watch(() => quickMeetForm.createMeetNumber, (newVal) => {
     // TODO使用系统生成的
   }
 }, {
-  immediate: true,
-  deep: true
+  immediate: true
 })
 
 
-function handleOnmouseOver(item: string): void {
+function handleOnmouseOver(): void {
   quickAction.value = true
 }
 
-function handleOnmouseLeave(item: string): void {
+function handleOnmouseLeave(): void {
  quickAction.value = false
 }
 
@@ -116,6 +115,16 @@ function handleClickCancel(): void {
   quickMeetForm.meetingSubject = ""
   quickMeetForm.isPossword = "0"
   quickMeetForm.meetingPossword = ""
+}
+
+function handleClearFormData(): void {
+  Object.keys(quickMeetForm).forEach(key => {
+    if (key === 'createMeetNumber' || key === 'isPossword') {
+      quickMeetForm[key] = "0"
+    } else {
+      quickMeetForm[key] = ""
+    }
+  })
 }
 
 </script>

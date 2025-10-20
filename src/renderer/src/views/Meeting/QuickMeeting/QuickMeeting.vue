@@ -34,11 +34,16 @@ const init = ref<boolean>(false)
 const layoutType = ref<Layout>(Layout.GRID)
 const effect = ref<ThemeType>('light')
 const footerActive = ref<string>("")
-const baseInfo = ref<BaseInfo>({}) // 获取基础的配置信息
+const baseInfo = ref<BaseInfo>({
+  micEnable: null,
+  cameraEnable: null,
+  micOpen: false,
+  cameraOpen: false,
+}) // 获取基础的配置信息
 const microphone = ref<MediaDeviceInfo | null>(null)
 const stream = ref<MediaStream | null>(null) // 获取摄像头信息
-const LayoutGridRef = ref<Instanceof<typeof LayoutGrid>>(null)
-const mumberList = ref([])
+const LayoutGridRef = ref<InstanceType<typeof LayoutGrid>>()
+const mumberList = ref<any[]>([])
 
 onMounted(() => {
   initEnv()
@@ -50,14 +55,14 @@ onUnmounted(() => {
 })
 
 // 通过路由获取屏幕的id
-const screenId = computed<string>(() => route.query.screenId ?? "")
+const screenId = computed<string>(() => (route.query.screenId) as string ?? "")
 const userInfo = computed<UserInfo>(() => userInfoStore.userInfo)
 
-async function initEnv(): void {
+async function initEnv() {
   const sysSetting = await getSetting()   // 获取配置文件
   if (sysSetting.openMicrophone) {
     const devices = await navigator.mediaDevices.enumerateDevices()
-    microphone.value = devices.find(device => device.kind === 'audioinput')    // 首先需要获取麦克风
+    microphone.value = devices.find(device => device.kind === 'audioinput') ?? null    // 首先需要获取麦克风
   }
   if (sysSetting.openVideo) {
     // 获取摄像头
@@ -71,9 +76,9 @@ async function initEnv(): void {
   }
 }
 
-async function handleOpenCamera(): void {
+async function handleOpenCamera() {
   stream.value = await openCamera()
-  if (stream.value) {
+  if (stream.value && LayoutGridRef.value) {
     baseInfo.value.cameraEnable = stream.value
     LayoutGridRef.value.initVideo()
     ElMessage({
@@ -92,7 +97,7 @@ function handleStopCamera() {
   })
 }
 
-async function getSetting(): SettingFormData {
+async function getSetting(): Promise<SettingFormData> {
   const settingData = await window.electron.ipcRenderer.invoke("setting-get")
   effect.value = settingData.themeValue
   return settingData

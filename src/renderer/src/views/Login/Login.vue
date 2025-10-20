@@ -66,17 +66,12 @@ import { ref, reactive, watchEffect, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import titleBar from '@/components/titleBar/titleBar.vue'
 import { setLocalStorage, getLocalStorage } from '@/utils/localStorage'
-import { initProject } from '@/service/service'
 
 const router = useRouter()
 
 const isCheck = ref<boolean>(false);
 const dialogVisible = ref<boolean>(false);
 const clickType = ref<string>('')
-
-onMounted(() => {
-  initProject()
-})
 
 watchEffect(() => {
   const isChecked = getLocalStorage("isCheck")

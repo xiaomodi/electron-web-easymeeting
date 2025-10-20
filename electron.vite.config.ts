@@ -19,11 +19,12 @@ export default defineConfig({
     },
     plugins: [vue()],
     server: {
+      cors: true, // 允许跨域
       proxy: {
-        "api": {
-          target: "http://localhost:6060",
+        "/api": {
+          target: "http://192.168.1.2:6060",
           changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api/, '/api')
+          rewrite: (path) => path,
         }
       }
     }

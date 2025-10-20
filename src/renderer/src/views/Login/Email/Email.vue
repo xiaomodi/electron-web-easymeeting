@@ -14,7 +14,7 @@
           </el-input>
         </el-form-item>
         <el-form-item v-if="!isLogin">
-          <el-input v-model="loginFormData.username" clearable placeholder="请输入昵称">
+          <el-input v-model="loginFormData.nickName" clearable placeholder="请输入昵称">
             <template #prefix>
                 <el-icon class="el-input__icon">
                   <User />
@@ -23,7 +23,7 @@
           </el-input>
         </el-form-item>
         <el-form-item>
-          <el-input v-model="loginFormData.password" clearable placeholder="请输入密码">
+          <el-input v-model="loginFormData.password" type="password" clearable placeholder="请输入密码">
             <template #prefix>
                 <el-icon class="el-input__icon">
                   <Unlock />
@@ -32,7 +32,7 @@
           </el-input>
         </el-form-item>
         <el-form-item v-if="!isLogin">
-          <el-input v-model="loginFormData.passwordAgain" clearable placeholder="请再次输入密码">
+          <el-input v-model="loginFormData.rePassword" type="password" clearable placeholder="请再次输入密码">
             <template #prefix>
                 <el-icon class="el-input__icon">
                   <Unlock />
@@ -42,24 +42,23 @@
         </el-form-item>
         <el-form-item>
           <div class="check_code_wrapper">
-            <el-input v-model="loginFormData.identifyCode" clearable placeholder="请输入验证码">
+            <el-input v-model="loginFormData.checkCode" clearable placeholder="请输入验证码">
               <template #prefix>
                   <el-icon class="el-input__icon">
                     <CircleCheck />
                   </el-icon>
                 </template>
             </el-input>
-            <img class="check_img" :src="checkImg" @click="handleGetCheckCode" alt="验证码">
+            <img class="check_img" :src="checkCodeImg" @click="handleGetCheckCode" alt="验证码">
           </div>
         </el-form-item>
         <el-form-item>
           <el-button
             type="primary" 
             style="width: 100%; margin-top: 20px;" 
-            @click="handleClickLogin"
-            v-loading.fullscreen.lock="loginLoading"
+            @click="handleClickSubmitBtn"
             size="large"
-            :disabled="disabled" 
+            :disabled="isLogin ? loginDisabled : registerDisabled" 
           >
             {{ isLogin ? '登录' : '注册' }}
           </el-button>
@@ -73,78 +72,107 @@
 <script lang='ts' setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Message, Unlock, CircleCheck, User } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
-import { getCheckCode, login } from '@/service/service'
-import titleBar from "@/components/TitleBar/titleBar.vue"
+import { setLocalStorage, getLocalStorage } from '@/utils/localStorage'
+import { fetchCheckCodeImg, register, login, type LoginFormData } from '@/service/service'
+import { md5 } from 'js-md5'
+import titleBar from "@/components/titleBar/titleBar.vue"
 import BackHeader from '@/components/BackHeader/BackHeader.vue'
 import { useUserInfoStore } from '@/store/userInfo'
 
 const router = useRouter()
 const userInfoStore = useUserInfoStore()
-
-interface LoginFormData {
-  email: string,
-  username?: string,
-  password: string,
-  passwordAgain?: string,
-  identifyCode: string
-}
-
 const loginFormData = reactive<LoginFormData>({
   email: "",
-  username: "",
+  nickName: "",
   password: "",
-  passwordAgain: "",
-  identifyCode: ""
+  rePassword: "",
+  checkCode: "",
+  checkCodeKey: ""
 })
 const isLogin = ref<boolean>(true)
-const loginLoading = ref<boolean>(false)
-const checkImg = ref<string>("")
+const checkCodeImg = ref<string>("")
 
 onMounted(() => {
   handleGetCheckCode()
 })
 
-const disabled = computed<boolean>(() => {
-  if (loginFormData.email && loginFormData.password && loginFormData.identifyCode) return false
+const registerDisabled = computed<boolean>(() => {
+  if (loginFormData.email && loginFormData.password && loginFormData.rePassword && loginFormData.checkCode) return false
   return true
 })
 
-function handleGetCheckCode():void {
-  console.log("handleGetCheckCode")
-}
+const loginDisabled = computed<boolean>(() => {
+  if (loginFormData.email && loginFormData.password && loginFormData.checkCode) return false
+  return true
+})
 
-function handleClickIsLogin() {
-  isLogin.value = !isLogin.value
-}
-
-function handleClickLogin() {
-  loginLoading.value = true
-  login(loginFormData).then(res => {
-
-  }).catch(err => {
-    setTimeout(() => {
-      loginLoading.value = false
-      window.electron.ipcRenderer.invoke('login-success', {
-        userInfo: {
-          email: "loginFormData.email",
-          password: "loginFormData.password",
-          username: "loginFormData.username"
-        },
-        wsUrl: import.meta.env.VITE_WS_URL
-      })
-      userInfoStore.setUserInfo({
-        email: "loginFormData.email",
-        password: "loginFormData.password",
-        username: "loginFormData.username"
-      })
-      router.push('/home')
-    }, 1000)
+function handleGetCheckCode(): void {
+  fetchCheckCodeImg().then((res: any) => {
+    if (res && res.code === 200) {
+      const { checkCode, checkCodeKey } = res.data
+      checkCodeImg.value = checkCode
+      setLocalStorage("checkCodeKey", checkCodeKey)
+    }
   })
 }
 
-function handleClickBack() {
+function handleClickIsLogin(): void {
+  isLogin.value = !isLogin.value
+  clearFormData()
+}
+
+function handleClickSubmitBtn(): void {
+  if (isLogin.value) {
+    console.log("登陆操作 ")
+    handleClickLogin()
+  } else {
+    console.log("注册操作 ")
+    handleClickRegister()
+  }
+}
+
+function handleClickRegister(): void {
+  if (loginFormData.password !== loginFormData.rePassword) {
+    ElMessage.error('两次输入的密码不一致')
+    return
+  }
+  loginFormData.checkCodeKey = getLocalStorage("checkCodeKey")
+  register(loginFormData).then((res: any) => {
+    if (res && res.code === 200) {
+      ElMessage.success("注册成功")
+      isLogin.value = !isLogin.value
+    }
+  }).finally(() => {
+    handleGetCheckCode()
+  })
+}
+
+function handleClickLogin(): void {
+  loginFormData.password = md5(loginFormData.password)
+  loginFormData.checkCodeKey = getLocalStorage("checkCodeKey")
+  login(loginFormData).then((res: any) => {
+    if (res && res.code === 200 && res.data) {
+      ElMessage.success("登录成功")
+       window.electron.ipcRenderer.invoke('login-success', {
+        userInfo: res.data,
+        wsUrl: import.meta.env.VITE_WS_URL
+      })
+      userInfoStore.setUserInfo(res.data)
+      router.push('/home')
+    }
+  })
+}
+
+function handleClickBack(): void {
   router.go(-1)
+}
+
+function clearFormData(): void {
+  Object.keys(loginFormData).forEach(key => {
+    loginFormData[key] = ''
+  })
 }
 
 </script>

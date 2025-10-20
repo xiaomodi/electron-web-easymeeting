@@ -30,7 +30,7 @@
 </template>
 
 <script lang='ts' setup>
-import { ref, reactive, defineProps, computed, onMounted, defineExpose } from 'vue'
+import { ref, defineProps, computed, onMounted, defineExpose } from 'vue'
 import { type BaseInfo } from '../type'
 import { type UserInfo } from '@/store/userInfo'
 import { initStream } from '@/utils/media'
@@ -38,14 +38,14 @@ import { User } from '@element-plus/icons-vue'
 import Avatar from '@/components/Avatar/Avatar.vue'
 
 const props = defineProps<{
-  mumberList: number,
+  mumberList: any[],
   baseInfo: BaseInfo,
-  userInfo: userInfo,
+  userInfo: UserInfo,
   screenId: string
 }>()
 
 const MAX_LENGTH = 30
-const videoRef = ref<HTMLMediaElement>(null)
+const videoRef = ref<HTMLMediaElement | null>(null)
 
 onMounted(() => {
   initVideo()

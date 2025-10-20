@@ -24,7 +24,7 @@ withDefaults(defineProps<{
 })
 
 const micInfoRef = ref<HTMLElement | null>(null)
-const micInfo = reactive()
+const micInfo = reactive({})
 const micList = reactive<MediaDeviceInfo[]>([])
 
 onMounted(() => {
@@ -37,7 +37,7 @@ function getMicList(): void {
       device.kind === 'audioinput' && device.deviceId === 'default'
       return device
     })
-    micList.push(list)
+    micList.push(list!)
   })
 }
 
