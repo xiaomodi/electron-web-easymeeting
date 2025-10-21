@@ -1,8 +1,8 @@
 // electron 主进程的 store 类似于pinia
+import ElectronStore from 'electron-store'
 
-import Store from 'electron-store'
+const store = new ElectronStore();
 
-const store = new Store();
 let userId: string | null = null;
 
 const initUserId = (_userId: string) => {
@@ -24,7 +24,7 @@ const getUserId = (): string => {
   throw new Error('User ID not initialized');
 }
 
-export default {
+export {
   initUserId,
   setData,
   getData,

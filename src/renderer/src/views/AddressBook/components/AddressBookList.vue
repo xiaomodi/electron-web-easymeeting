@@ -17,7 +17,7 @@
       <div v-if="!contactsList.length" class="empty"> <el-empty description="暂无联系人" /></div>
       <el-scrollbar v-else>
         <div class="contacts_item" v-for="(item, index) in contactsList" :key="index">
-          <ChatHeads :userInfo="item"/>
+          <Avatar :userInfo="item" width="35px"/>
           <div class="contacts_username">{{ item.nickName }}</div>
           <el-dropdown :hide-on-click="false" class="dropdown" >
             <span class="more">
@@ -38,26 +38,27 @@
     v-model="dialogVisible"
     title="添加联系人"
     :show-footer="false"
+    :close="handleDialogCLose"
     draggable
   >
     <div class="dialog_content">
-      <el-input v-model="searchValue" class="dialog_input" placeholder="输入联系人ID搜索" :prefix-icon="Search" clearable />
+      <el-input v-model="searchValueByUserId" class="dialog_input" placeholder="输入联系人ID搜索" :prefix-icon="Search" clearable />
       <el-button type="primary" size="small" @click="handleClickSearch">搜索</el-button>
     </div>
     <div v-if="!searchList.length" class="dialog_content_empty">
       <el-empty description="暂无联系人"/>
     </div>
     <div v-else class="searchList_content">
-      <div class="search_item" v-for="item in searchList" :key="item.id">
-        <ChatHeads :userInfo="item"/>
+      <div class="search_item" v-for="item in searchList" :key="item.userId">
+        <Avatar :userInfo="item" width="35px"/>
         <div class="user_name">{{ item.nickName }}</div>
         <div class="search_user_state">
-          <span v-if="item.state && +item.state === -1">自己</span>
-          <span v-else-if="item.state && +item.state === 1" style="color: var(--success-color)">已是联系人</span>
-          <span v-else-if="item.state && +item.state === 3" style="color: var(--error-color)">你被对方拉黑</span>
-          <span v-else-if="item.state && +item.state === 0" style="color: var(--wait-color)">已申请待处理</span>
+          <span v-if="item.status && +item.status === -1">自己</span>
+          <span v-else-if="item.status && +item.status === 1" style="color: var(--success-color)">已是联系人</span>
+          <span v-else-if="item.status && +item.status === 3" style="color: var(--error-color)">你被对方拉黑</span>
+          <span v-else-if="item.status && +item.status === 0" style="color: var(--wait-color)">已申请待处理</span>
           <span v-else>
-            <el-button type="primary" size="small" @click="handleClickApply">申请好友</el-button>
+            <el-button type="primary" size="small" @click="handleClickApply(item)">申请好友</el-button>
           </span>
         </div>
       </div>
@@ -66,116 +67,109 @@
 </template>
 
 <script lang='ts' setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, User, More } from '@element-plus/icons-vue'
+import { searchContact, contactApply, loadContactuser, type SearchContactData, ContactsListData } from '@/service/service/index'
+import Bus from '@/utils/eventBus'
 import Dialog from '@/components/Dialog/Dialog.vue'
-import ChatHeads from '@/components/ChatHeads/ChatHeads.vue'
+import Avatar from '@/components/Avatar/Avatar.vue'
 
 const dialogVisible = ref<boolean>(false)
 const searchContacts = ref<string>("")
-const searchValue = ref<string>("")
-const contactsList = ref([
-  {
-    nickName: "测试数据",
-    id: "123",
-    state: "",
-    userId: ""
-  },
-  {
-    nickName: "试数据",
-    id: "1234",
-    state: "",
-    userId: ""
-  },
-  // {
-  //   nickName: "测试数据",
-  //   id: "123",
-  //   state: ""
-  // },
-  // {
-  //   nickName: "试数据",
-  //   id: "1234",
-  //   state: ""
-  // },
-  // {
-  //   nickName: "测试数据",
-  //   id: "123",
-  //   state: ""
-  // },
-  // {
-  //   nickName: "试数据",
-  //   id: "1234",
-  //   state: ""
-  // },
-  // {
-  //   nickName: "测试数据",
-  //   id: "123",
-  //   state: ""
-  // },
-  // {
-  //   nickName: "试数据",
-  //   id: "1234",
-  //   state: ""
-  // },
-  // {
-  //   nickName: "测试数据",
-  //   id: "123",
-  //   state: ""
-  // },
-  // {
-  //   nickName: "试数据",
-  //   id: "1234",
-  //   state: ""
-  // },
-  // {
-  //   nickName: "测试数据",
-  //   id: "123",
-  //   state: ""
-  // },
-  // {
-  //   nickName: "试数据",
-  //   id: "1234",
-  //   state: ""
-  // },
-  // {
-  //   nickName: "测试数据",
-  //   id: "123",
-  //   state: ""
-  // },
-  // {
-  //   nickName: "试数据",
-  //   id: "1234",
-  //   state: ""
-  // },
-  // {
-  //   nickName: "测试数据",
-  //   id: "123",
-  //   state: ""
-  // },
-  // {
-  //   nickName: "试数据",
-  //   id: "1234",
-  //   state: ""
-  // },
-])
+const searchValueByUserId = ref<string>("")
+const contactsList = reactive<ContactsListData[]>([])
+const searchList = reactive<SearchContactData[]>([])
 
-const searchList = ref([{
-  userId: "",
-  nickName: "测试数据",
-  id: "123",
-  state: ""
-}])
+onMounted(() => {
+  getContactList()
+  WsFriendApplyHandle()
+})
+
+onUnmounted(() => {
+  Bus.off("reloadContactsListAndCount")
+})
+
+Bus.on("reloadContactsListAndCount", () => {
+  getContactList()
+})
+
+function WsFriendApplyHandle() {
+  window.electron.ipcRenderer.on("ws-friend-apply-handle", (e, data) => {
+    getContactList()
+    const { messageContent, sendUserNickName } = data
+    let text = ""
+    let type = ""
+    switch(+messageContent) {
+      case 1:
+        text = `${sendUserNickName}已经同意了你的申请`
+        type = "success"
+        break
+      case 2:
+        text = `${sendUserNickName}拒绝了你的申请`
+        type = "error"
+        break
+      case 3:
+        text = `${sendUserNickName}已经把你拉黑了`
+        type = "info"
+        break
+    }
+    ElMessageBox.confirm(
+      text,
+      "消息",
+      {
+        confirmButtonText: "确定",
+        showCancelButton: false,
+        type: type as 'info' | 'success' | 'warning' | 'error',
+      }
+    )
+  })
+}
+
+function getContactList(): void {
+  loadContactuser().then((res: any) => {
+    if (res && res.code === 200 && res.data && res.data.length) {
+      contactsList.length = 0
+      contactsList.push(...res.data)
+    }
+  })
+}
 
 function handleClickAdd(): void {
   dialogVisible.value = true
 }
 
 function handleClickSearch(): void {
-  console.log("handleClickSearch")
+  searchList.length = 0
+  searchContact({
+    userId: searchValueByUserId.value
+  }).then((res: any) => {
+    if (res && res.code === 200 && res.data) {
+      ElMessage.success("搜索成功")
+      searchList.push(res.data)
+    }
+  })
 }
 
-function handleClickApply(): void {
-  console.log("handleClickApply")
+function handleDialogCLose(): void {
+  searchList.length = 0
+  searchValueByUserId.value = ""
+}
+
+function handleClickApply(item: SearchContactData): void {
+  contactApply({
+    receiveUserId: item.userId
+  }).then((res: any) => {
+    if (res && res.code === 200) {
+      if (res.data === 0) {
+        ElMessage.success("申请成功，等待对方接受！")
+      } else {
+        ElMessage.success("添加好友成功！")
+      }
+      dialogVisible.value = false
+      handleDialogCLose()
+    }
+  })
 }
 
 function handleClickItem():void {}
@@ -216,6 +210,7 @@ function handleClickItem():void {}
       display: flex;
       align-items: center;
       justify-content: center;
+      color: var(--ev-c-black-soft);
       cursor: pointer;
     }
   }
@@ -244,6 +239,7 @@ function handleClickItem():void {}
       margin-bottom: 10px;
       .contacts_username {
         font-size: 12px;
+        margin-left: 10px;
       }
       .dropdown {
         width: 30px;
@@ -299,6 +295,7 @@ function handleClickItem():void {}
     }
     .user_name {
       font-size: 12px;
+      margin-left: 10px;
     }
     .search_user_state {
       margin-left: auto;

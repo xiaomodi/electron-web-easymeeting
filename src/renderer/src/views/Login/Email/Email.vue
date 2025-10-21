@@ -1,6 +1,6 @@
 <template>
   <titleBar min close title="腾讯会议" :isPosition="false"/>
-  <div class="email_wrapper">
+  <div class="email_wrapper" @keydown.enter="handleClickSubmitBtn">
     <BackHeader title="邮箱验证码登录" @back="handleClickBack"/>
     <div class="login_wrapper">
       <el-form :model="loginFormData">
@@ -161,6 +161,8 @@ function handleClickLogin(): void {
       })
       userInfoStore.setUserInfo(res.data)
       router.push('/home')
+    } else {
+      handleGetCheckCode()
     }
   })
 }

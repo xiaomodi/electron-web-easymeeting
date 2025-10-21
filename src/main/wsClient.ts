@@ -13,8 +13,8 @@ let wsUrl: string | null = null
 let needReconnect: boolean = false // 是否需要重连
 
 // 初始化
-const initWs = (wsurl: string) => {
-  wsUrl = wsurl
+const initWs = (_wsurl: string) => {
+  wsUrl = _wsurl
   needReconnect = true // 需要重连
   connectws()
 }
@@ -54,8 +54,17 @@ const connectws = (): void => {
 
   // 消息接受
   ws.onmessage = (event) => {
+    console.log("ws.onmessage", event)
     const data = JSON.parse(event.data)
-    console.log(`收到ws的消息: ${data}`)
+    const mainWindow = getWindow('main')
+    switch(data.messageType) {
+      case 8: //好友申请
+        mainWindow.webContents.send("ws-friend-apply", data)
+        break
+      case 12: // 处理好友申请
+        mainWindow.webContents.send("ws-friend-apply-handle", data)
+        break
+    }
   }
 
   // 出现错误情况

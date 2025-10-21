@@ -52,3 +52,34 @@ export interface SettingFormData {
   themeValue: string,
   filePath: string
 }
+
+export interface OpenFileParams {
+  localFilePath: string,
+  folder?: boolean
+}
+
+type DataType = {
+  addType: string,
+  screenId: string
+}
+export interface OpenQuickMeetingParams {
+  title: string,
+  windowId: string,
+  path: string,
+  data: DataType,
+  width: number,
+  height: number,
+  maximizable: boolean
+}
+
+export interface OpenWindowParams {
+  windowId: string,
+  title: string,
+  path: string,
+  width: number,
+  height: number,
+  data: DataType,
+  maximizable: boolean
+}
+
+export type ThemeType = "light" | "dark"

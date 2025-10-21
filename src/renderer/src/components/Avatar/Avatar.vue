@@ -1,6 +1,6 @@
 <template>
-  <img v-if="userInfo.userId" :src="userInfo.userId" class="user_icon image" alt="">
-  <div v-else class="user_icon none">{{ userInfo.nickName.slice(0, 1) }}</div>
+  <!-- <img v-if="userInfo.userId" :src="userInfo.userId" class="user_icon image" alt=""> -->
+  <div class="user_icon none">{{ userInfo.nickName.slice(0, 1) }}</div>
 </template>
 
 <script lang='ts' setup>
@@ -11,7 +11,7 @@ interface UserInfo {
   userId: string | undefined,
 }
 const props = withDefaults(defineProps<{
-  userInfo: UserInfo,
+  userInfo: any,
   width?: string | number
 }>(), {
   width: '40px'

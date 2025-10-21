@@ -5,9 +5,9 @@ import { initWs, logout } from './wsClient'
 import { startRecording, stopRecording } from './ffmpeg'
 import { saveSetting, getSetting } from './setting'
 import { join } from 'path'
-import { type LoginSuccessType, GetScreenSource, SourceList, MapList, StartRecordParams, SettingFormData } from './main_type'
+import { type LoginSuccessType, GetScreenSource, SourceList, MapList, StartRecordParams, SettingFormData, OpenFileParams, OpenQuickMeetingParams, OpenWindowParams, ThemeType } from './main_type'
 import icon from '../../resources/icon.png?asset'
-import store from './store'
+import { setData, getData, initUserId } from './store'
 
 // 获取窗口大小
 export const onWindowControl = () => {
@@ -42,14 +42,10 @@ export const onLoginSuccess = () => {
     mainWindow.setResizable(true)
     mainWindow.setMinimumSize(720, 480)
     mainWindow.setSize(720, 480)
-    console.log("userInfo", userInfo)
-    console.log("wsUrl", wsUrl)
-
-    //  TODO: 保存用户信息
-    // store.initUserId(userInfo.userId)
-    // store.setData('userInfo', userInfo)
-    // TODO: 初始化ws
-    // initWs(`${wsUrl}${userInfo.token}`)
+    // initUserId(userInfo.userId) 
+    // setData('userInfo', userInfo)
+    //: 初始化ws
+    initWs(`${wsUrl}${userInfo.token}`)
   })
 }
 
@@ -88,7 +84,6 @@ export const onGetScreenSource = (): void => {
   })
 }
 
-
 // 开始录制
 export const onStartRecord = (): void => {
   ipcMain.handle("start_record", (e: IpcMainInvokeEvent, params: StartRecordParams) => {
@@ -100,7 +95,6 @@ export const onStartRecord = (): void => {
   })
 }
 
-
 // 停止录制
 export const onStopRecord = (): void => {
   ipcMain.handle("stop_record", () => {
@@ -109,10 +103,6 @@ export const onStopRecord = (): void => {
 }
 
 // 打开文件
-interface OpenFileParams {
-  localFilePath: string,
-  folder?: boolean
-}
 export const onOpenFile = (): void => {
   ipcMain.handle("open_file", (e: IpcMainInvokeEvent, {localFilePath, folder = false}: OpenFileParams) => {
     if (folder) {
@@ -153,20 +143,6 @@ export const onChangeFilePath = () => {
 }
 
 // 打开快速会议窗口
-type DataType = {
-  addType: string,
-  screenId: string
-}
-
-interface OpenQuickMeetingParams {
-  title: string,
-  windowId: string,
-  path: string,
-  data: DataType,
-  width: number,
-  height: number,
-  maximizable: boolean
-}
 export const onOpenWindow = () => {
   ipcMain.handle("open-quick-meeting-window", (e: IpcMainInvokeEvent, params: OpenQuickMeetingParams) => {
     const {title, windowId, path, data, width, height, maximizable} = params
@@ -183,15 +159,6 @@ export const onOpenWindow = () => {
 }
 
 // 打开新窗口(公共方法)
-interface OpenWindowParams {
-  windowId: string,
-  title: string,
-  path: string,
-  width: number,
-  height: number,
-  data: DataType,
-  maximizable: boolean
-}
 const openWindow = ({windowId, title, path, width = 960, height = 720, data, maximizable = false}: OpenWindowParams) => {
   let newWindow: BrowserWindow = getWindow(windowId)
   const paramsArray: string[] = []
@@ -286,7 +253,6 @@ const closeWindow = (windowId: string) => {
 }
 
 // 监听主题切换
-type ThemeType = "light" | "dark"
 export const onThemeChange = () => {
   ipcMain.handle("theme-changed", (e: IpcMainInvokeEvent, theme: ThemeType) => {
     const windows: WindowManage = windowManage

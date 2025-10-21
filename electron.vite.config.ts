@@ -22,7 +22,7 @@ export default defineConfig({
       cors: true, // 允许跨域
       proxy: {
         "/api": {
-          target: "http://192.168.1.2:6060",
+          target: "http://192.168.1.6:6060",
           changeOrigin: true,
           rewrite: (path) => path,
         }

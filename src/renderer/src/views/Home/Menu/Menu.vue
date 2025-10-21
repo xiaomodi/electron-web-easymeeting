@@ -13,12 +13,12 @@
         v-for="item in menuList"
         :class="{ 'action': action === item.name}" 
         @click="handleClickMenuItem(item)">
-        <el-badge is-dot :offset="[6, 0]" class="item">
+        <el-badge :offset="[6, 0]" :value="item.value" :max="10" class="item" >
           <el-icon>
-            <component :is="item.meta?.icon" />
+            <component :is="item.icon" />
           </el-icon>
         </el-badge>
-        {{ item.meta?.name }}
+        {{ item.name }}
       </div>
     </div>
     <div class="menu_bottom">
@@ -38,38 +38,70 @@
 </template>
 
 <script lang='ts' setup>
-import { ref, reactive, computed, onMounted, type ComputedRef } from 'vue'
-import { Message, Setting, User } from '@element-plus/icons-vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { Message, Setting, User, VideoCamera, Memo, VideoPlay } from '@element-plus/icons-vue'
 import { useRouter, useRoute, type RouteRecordRaw } from 'vue-router'
-import { routerList } from '@/router'
+import Bus from '@/utils/eventBus'
+import { loadContactApplyDealWithCount } from '@/service/service'
 
+interface MenuList {
+  name: string,
+  path: string,
+  icon: any,
+  value: number | string
+}
 const router = useRouter()
 const route = useRoute()
-
 const action = ref<string>("")
+const menuList = reactive<MenuList[]>([
+  {
+    name: "会议",
+    path: "/meeting",
+    icon: VideoCamera,
+    value: ""
+  },
+  {
+    name: "通讯录",
+    path: "/address_book",
+    icon: Memo,
+    value: ""
+  },
+  {
+    name: "录制",
+    path: "/record",
+    icon: VideoPlay,
+    value: ""
+  }
+])
 
 onMounted(() => {
   getRoute()
+  getContactApplyDealWithCount()
 })
 
-const menuList:ComputedRef<RouteRecordRaw[]> = computed(() => {
-  let list: RouteRecordRaw[] = []
-  routerList.forEach(item => {
-    if (item.name === "Home") {
-      action.value = item.children?.length ? String(item.children[0].name ?? "") : ""
-      list = item.children ?? []
+onUnmounted(() => {
+  Bus.off("reloadContactsListAndCount")
+  window.electron.ipcRenderer.removeAllListeners("ws-friend-apply")
+})
+
+Bus.on("reloadContactsListAndCount", () => {
+  getContactApplyDealWithCount()
+})
+
+function getContactApplyDealWithCount() {
+  loadContactApplyDealWithCount().then((res: any) => {
+    if (res && res.code === 200) {
+      menuList[1].value = res.data > 0 ? res.data : ""
     }
   })
-  list = list.filter(item => !["Setting"].includes(String(item.name ?? "")))
-  return list
-})
+}
 
 function getRoute() {
   const actionRoute = route.name
   action.value = String(actionRoute ?? "")
 }
 
-function handleClickMenuItem(item: RouteRecordRaw) {
+function handleClickMenuItem(item: any) {
   action.value = String(item.name ?? "")
   router.push(item.path)
 }
@@ -78,8 +110,6 @@ function handleClickSetting(): void {
   action.value = 'Setting'
   router.push("/setting")
 }
-
-
 </script>
 
 <style lang="scss" scoped>
