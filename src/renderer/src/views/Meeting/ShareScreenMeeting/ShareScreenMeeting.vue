@@ -12,7 +12,7 @@
         <div class="dialog_item">
           <div class="label necessary">会议号</div>
           <div class="content">
-            <el-input v-model="formData.meetingId" placeholder="请输入会议号" clearable/>
+            <el-input v-model="formData.meetingNo" placeholder="请输入会议号" clearable/>
           </div>
         </div>
         <div class="dialog_item">
@@ -24,7 +24,7 @@
         <div class="dialog_item select_screen">
           <div class="label screen_label necessary">选择屏幕</div>
           <div class="content select_screen_content">
-            <el-radio-group v-model="formData.selectScreen">
+            <el-radio-group v-model="formData.screenId">
               <el-radio v-for="item in screenList" :key="item.display_id" :value="item.display_id">
                 <div class="select_screen_wrapper">
                   <img :src="item.thumbnail" alt="" />
@@ -37,16 +37,16 @@
         <div class="dialog_item">
           <div class="label">会议密码</div>
           <div class="content">
-            <el-radio-group v-model="formData.joinMeetingType">
+            <el-radio-group v-model="formData.joinType">
               <el-radio value="0">免密入会</el-radio>
               <el-radio value="1">密码入会</el-radio>
             </el-radio-group>
           </div>
         </div>
-         <div class="dialog_item" v-show="formData.joinMeetingType == '1'">
+         <div class="dialog_item" v-show="formData.joinType == '1'">
           <div class="label"></div>
           <div class="content">
-            <el-input v-model="formData.meetingPassword" placeholder="请输入会议密码" clearable/>
+            <el-input v-model="formData.joinPassword" placeholder="请输入会议密码" clearable/>
           </div>
         </div>
       </div>
@@ -59,17 +59,11 @@
 </template>
 
 <script lang='ts' setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watchEffect } from 'vue'
 import { Dialog } from '@/components'
-import { useUserInfoStore } from '@/store/userInfo'
-
-interface FormData {
-  meetingId: string,
-  nickName: string,
-  selectScreen: string,
-  joinMeetingType: "0" | "1",
-  meetingPassword?: string,
-}
+import { reserveJoinMeeting, type JoinMeetingFormData } from '@/service/service'
+import { openMeetingWindow } from '../openMeetingWindow'
+import { getLocalStorage } from '@/utils/localStorage'
 
 interface MapList {
   id: string,
@@ -78,29 +72,27 @@ interface MapList {
   display_id: string
 }
 
-const userInfoStore = useUserInfoStore()
 const shareAction = ref<boolean>(false)
 const ShareScreenMeetingDialog = ref<boolean>(false)
-const formData = reactive<FormData>({
-  meetingId: "",
-  nickName: "",
-  selectScreen: "",
-  joinMeetingType: "0",
-  meetingPassword: "",
-})
+const formData = reactive<JoinMeetingFormData>({} as JoinMeetingFormData)
 const screenList = ref<MapList[]>([])
 
 onMounted(() => {
   getScreenList()
-  initUserName()
+})
+
+watchEffect(() => {
+  if (ShareScreenMeetingDialog.value) {
+    initUserName()
+  }
 })
 
 const disabled = computed(() => {
-  return !formData.meetingId || !formData.nickName || !formData.selectScreen
+  return !formData.meetingNo || !formData.nickName || !formData.screenId
 })
 
 function initUserName(): void {
-  formData.nickName = userInfoStore.userInfo.nickName ?? ""
+  formData.nickName = getLocalStorage("userInfo").nickName ?? ""
 }
 
 function getScreenList() {
@@ -112,10 +104,9 @@ function getScreenList() {
     },
     fetchWindowIcons: false
   }).then(res => {
-    console.log("getScreenList", res)
     if (res.length) {
       screenList.value = res
-      formData.selectScreen = res[0].display_id
+      formData.screenId = res[0].display_id
     }
   })
 }
@@ -133,12 +124,18 @@ function handleClickShareScreen(): void {
 }
 
 function handleClickShareScreenBtn(): void {
-  console.log("开启共享屏幕", formData)
+  reserveJoinMeeting(formData).then((res: any) => {
+    console.log("rs", res)
+    if (res && res.code === 200) {
+      ShareScreenMeetingDialog.value = false
+      openMeetingWindow("1", formData.screenId)
+    }
+  })
 }
 
 function handleClearFormData(): void {
   Object.keys(formData).forEach(key => {
-    if (key === 'joinMeetingType') {
+    if (key === 'joinType') {
       formData[key] = "0"
     } else {
       formData[key] = ""

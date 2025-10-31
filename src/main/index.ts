@@ -2,7 +2,7 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { onWindowControl, onLoginSuccess, onGetScreenSource, onStartRecord, onStopRecord, onOpenFile, onSaveSetting, onGetSetting, onChangeFilePath, onLogout, onOpenWindow, onThemeChange } from './ipc'
+import { onWindowControl, onLoginSuccess, onGetScreenSource, onStartRecord, onStopRecord, onOpenFile, onSaveSetting, onGetSetting, onChangeFilePath, onLogout, onOpenWindow, onThemeChange, onSendPeerConnection } from './ipc'
 import { setWindow } from './windowProxy'
 
 function createWindow(): void {
@@ -29,7 +29,7 @@ function createWindow(): void {
 
   setWindow("main", mainWindow) // 设置窗口管理
 
-  mainWindow.webContents.openDevTools()
+  // mainWindow.webContents.openDevTools()
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -90,6 +90,8 @@ onLogout()
 onOpenWindow()
 
 onThemeChange()
+
+onSendPeerConnection()
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.

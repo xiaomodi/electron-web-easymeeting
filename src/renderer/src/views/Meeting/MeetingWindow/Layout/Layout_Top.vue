@@ -9,12 +9,19 @@
         </div>
       </div>
     </div>
-    <div class="bottom">
+    <div v-if="baseInfo.cameraEnable && baseInfo.cameraOpen" class="bottom">
+     <div class="video_user_info">
+        <div class="video_user_info_icon"><el-icon size="16"><User /></el-icon></div>
+        <div class="video_user_info_text">{{ userInfo.nickName }}</div>
+      </div>
+      <video class="video_play" ref="videoRef" autoplay muted loop playsinline></video>
+    </div>
+    <div v-else class="bottom">
       <div class="bottom_user_item">
-        <Avatar :userInfo="mumberList[0]" width="60px"/>
+        <Avatar :userInfo="userInfo" width="60px"/>
         <div class="user_name">
           <el-icon size="18" style="color: var(--main-color)"><User /></el-icon>
-          <p>{{ mumberList[0].nickName }}</p>
+          <p>{{ userInfo.nickName }}</p>
         </div>
       </div>
     </div>
@@ -22,13 +29,30 @@
 </template>
 
 <script lang='ts' setup>
-import { ref, reactive, defineProps } from 'vue'
+import { ref, watchEffect, defineProps } from 'vue'
+import { type UserInfo } from '@/store/userInfo'
+import { type BaseInfo } from '../meeing_window_type'
 import { User } from '@element-plus/icons-vue'
+import { usePublicMethod, type VideoRef } from './public'
 import Avatar from '@/components/Avatar/Avatar.vue'
 
 const props = defineProps<{
-  mumberList: any[]
+  baseInfo: BaseInfo,
+  userInfo: UserInfo,
+  screenId: string
 }>()
+
+const videoRef = ref<VideoRef>(null)
+const memberVideoRef = ref<VideoRef>(null)
+
+const { mumberList, allMemberList, initVideo, listenerMeetingMessage } = usePublicMethod(props, videoRef)
+
+watchEffect(() => {
+  if (videoRef.value) {
+    initVideo()
+    // listenerMeetingMessage()
+  }
+})
 
 </script>
 
@@ -80,6 +104,43 @@ const props = defineProps<{
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+    overflow: hidden;
+    .video_user_info {
+      max-width: 80px;
+      height: 20px;
+      position: absolute;
+      top: 0;
+      right: 0;
+      display: flex;
+      font-size: 12px;
+      z-index: 100;
+      background: var(--meeting-username-bg);
+      color: var(--meeting-username-color);
+      padding-right: 2px;
+      .video_user_info_icon {
+        flex: 0 0 20px;
+        height: 20px;
+        background-color: var(--main-color);
+        margin-right: 5px;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .video_user_info_text {
+        flex: 1;
+        line-height: 20px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+    .video_play {
+      width: 100%;
+      height: 100%;
+      transform: scaleX(-1);
+    }
     .bottom_user_item {
       width: 120px;
       height: 120px;

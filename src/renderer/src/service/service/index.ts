@@ -1,5 +1,5 @@
 import { service } from '../index'
-import { type LoginFormData, SearchContact, SearchContactData, ContactApply, ApplyList, DealWithApplyParams, ContactsListData } from './type'
+import { type LoginFormData, SearchContact, SearchContactData, ContactApply, ApplyList, DealWithApplyParams, ContactsListData, JoinMeetingFormData, UpdateUserInfo, GetAvatar } from './type'
 export * from './type'
 // 获取验证码
 export const fetchCheckCodeImg = () => {
@@ -75,5 +75,80 @@ export const loadContactApplyDealWithCount = () => {
   return service({
     url: "/userContact/loadContactApplyDealWithCount",
     method: "GET"
+  })
+}
+
+// 共享屏幕加入会议
+export const reserveJoinMeeting = (params: JoinMeetingFormData) => {
+  return service({
+    url: "/meeting/reserveJoinMeeting",
+    method: "GET",
+    params
+  })
+}
+
+// 加入会议
+export const preJoinMeeting = (params: JoinMeetingFormData) => {
+  return service({
+    url: "/meeting/preJoinMeeting",
+    method: "GET",
+    params
+  })
+}
+
+export const quickMeeting = (params) => {
+  return service({
+    url: "/meeting/quickMeeting",
+    method: "GET",
+    params
+  })
+}
+
+// 加入会议
+interface JoinMeeting {
+  videoOpen: boolean,
+  
+}
+export const joinMeeting = (params: JoinMeeting) => {
+  return service({
+    url: "/meeting/joinMeeting",
+    method: "GET",
+    params
+  })
+}
+
+// 发起开启或者关闭摄像头的消息
+interface SendOpenVideoChangeMessage {
+  openVideo: boolean
+}
+export const sendOpenVideoChangeMessage = (params: SendOpenVideoChangeMessage) => {
+  return service({
+    url: "/meeting/sendOpenVideoChangeMessage",
+    method: "GET",
+    params
+  })
+}
+
+export const exitMeeting = () => {
+  return service({
+    url: "/meeting/exitMeeting",
+    method: "GET"
+  })
+}
+
+export const updateUserInfo = (params: UpdateUserInfo) => {
+  return service({
+    url: "/account/updateUserInfo",
+    method: "GET",
+    params
+  })
+}
+
+// "/api/file/getAvatar"
+export const getAvatar = (params: GetAvatar) => {
+  return service({
+    url: "/file/getAvatar",
+    method: "GET",
+    params
   })
 }

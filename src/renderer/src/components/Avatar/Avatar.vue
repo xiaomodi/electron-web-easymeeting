@@ -1,17 +1,22 @@
 <template>
-  <!-- <img v-if="userInfo.userId" :src="userInfo.userId" class="user_icon image" alt=""> -->
-  <div class="user_icon none">{{ userInfo.nickName.slice(0, 1) }}</div>
+  <img v-if="userInfo.userIcon" :src="userInfo.userIcon" class="user_icon image" alt="">
+  <div v-else class="user_icon none">{{ userInfo.nickName.slice(0, 1) }}</div>
 </template>
 
 <script lang='ts' setup>
 import { ref, reactive, defineProps, withDefaults, computed } from 'vue'
 
 interface UserInfo {
+  userId: string,
   nickName: string,
-  userId: string | undefined,
+  sex?: number | string | null,
+  token?: string,
+  meetingNo?: string,
+  admin?: boolean,
+  userIcon?: string
 }
 const props = withDefaults(defineProps<{
-  userInfo: any,
+  userInfo: UserInfo,
   width?: string | number
 }>(), {
   width: '40px'

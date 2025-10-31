@@ -52,12 +52,16 @@ ul {
   --background-color: var(--ev-c-white-soft);
   --menu-background-color: var(--background-color-light);
   --icon-color: var(--ev-c-black-soft);
+  --meeting-username-bg: rgba(0, 0, 0, 0.8);
+  --meeting-username-color: var(--ev-c-white-soft);
 }
 html[theme="dark"] {
   --text-color: var(--ev-c-white-soft);
   --background-color: var(--ev-c-black-soft);
   --menu-background-color: var(--ev-c-black-mute);
   --icon-color: var(--ev-c-white-soft);
+  --meeting-username-bg: rgba(255, 255, 255, 0.8);
+  --meeting-username-color: var(--ev-c-black-soft);
 }
 
 body {

@@ -1,7 +1,7 @@
 import { ipcMain, BrowserWindow, IpcMainEvent, IpcMainInvokeEvent, desktopCapturer, NativeImage, shell, dialog } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { getWindow, setWindow, removeWindow, windowManage, type WindowManage } from './windowProxy'
-import { initWs, logout } from './wsClient'
+import { initWs, logout, sendWsdata } from './wsClient'
 import { startRecording, stopRecording } from './ffmpeg'
 import { saveSetting, getSetting } from './setting'
 import { join } from 'path'
@@ -10,10 +10,26 @@ import icon from '../../resources/icon.png?asset'
 import { setData, getData, initUserId } from './store'
 
 // 获取窗口大小
+enum WindowType {
+  MIN = 'minimize',
+  MAX = 'maximize',
+  FULL = 'fullscreen',
+  CLOSE = 'close'
+}
+
+interface WindowControlType {
+  type: WindowType,
+  forceClose?: boolean
+}
+
+interface ExtendedBrowserWindow extends BrowserWindow {
+  forceClose?: boolean | null;
+}
+
 export const onWindowControl = () => {
-  ipcMain.on('window-control', (e: IpcMainEvent, type: string) => {
+  ipcMain.on('window-control', (e: IpcMainEvent, { type, forceClose }: WindowControlType) => {
     const webContents = e.sender
-    const win = BrowserWindow.fromWebContents(webContents)
+    const win = BrowserWindow.fromWebContents(webContents) as ExtendedBrowserWindow
     switch(type) {
       case 'minimize':
         win?.minimize()
@@ -27,9 +43,15 @@ export const onWindowControl = () => {
           win?.setWindowButtonVisibility(true)
         }
         break
-      case 'close':
+      case 'close': {
+        if (forceClose) {
+          win.forceClose = forceClose
+        } else {
+          win.forceClose = null
+        }
         win?.close()
         break
+      }
     }
   })
 }
@@ -42,8 +64,8 @@ export const onLoginSuccess = () => {
     mainWindow.setResizable(true)
     mainWindow.setMinimumSize(720, 480)
     mainWindow.setSize(720, 480)
-    // initUserId(userInfo.userId) 
-    // setData('userInfo', userInfo)
+    initUserId(userInfo.userId) 
+    setData('userInfo', userInfo)
     //: 初始化ws
     initWs(`${wsUrl}${userInfo.token}`)
   })
@@ -195,12 +217,15 @@ const openWindow = ({windowId, title, path, width = 960, height = 720, data, max
       newWindow.show()
     })
 
-    newWindow.on("close", () => {
-      // TODO 关闭会议窗口
-      // TODO 会议01 24分钟时候
+    newWindow.on("close", (event) => { // 预关闭
+      if (!(newWindow as any).forceClose) {
+        // TODO
+        // event.preventDefault()
+        newWindow.webContents.send("window-will-close") // 发送预关闭事件
+      }
     })
 
-    newWindow.on("closed", () => { // 用户又可能直接通过导航栏关闭窗口所以需要监听并告诉渲染进程
+    newWindow.on("closed", () => { // 已经关闭状态 用户又可能直接通过导航栏关闭窗口所以需要监听并告诉渲染进程
       closeWindow(windowId)
       removeWindow(windowId)
     })
@@ -248,7 +273,7 @@ const openWindow = ({windowId, title, path, width = 960, height = 720, data, max
 const closeWindow = (windowId: string) => {
   const mainWindow = getWindow("main")
   if(mainWindow) {
-    mainWindow.webContents.send("close-window", { windowId })
+    mainWindow.webContents.send("close-meeing-window", { windowId })
   }
 }
 
@@ -261,5 +286,13 @@ export const onThemeChange = () => {
        (sender as BrowserWindow).webContents.send('mainWindow-theme-changed', theme)
       }
     }
+  })
+}
+
+export const onSendPeerConnection = () => {
+  ipcMain.handle("send-peer-connection", (e: IpcMainInvokeEvent, peerData: any) => {
+    peerData.token = getData("userInfo").token
+    const peerMessage = JSON.stringify(peerData)
+    sendWsdata(peerMessage)
   })
 }

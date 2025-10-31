@@ -54,12 +54,28 @@ const connectws = (): void => {
 
   // 消息接受
   ws.onmessage = (event) => {
-    console.log("ws.onmessage", event)
     const data = JSON.parse(event.data)
+    console.log("ws-data", data)
     const mainWindow = getWindow('main')
+    const meetingWindow = getWindow('meeting')
     switch(data.messageType) {
+      case 1: // 加入房间
+      case 2: // 建立peer connection连接
+      case 3: // 退出房间
+      if (mainWindow && (data.messageType === 1 || data.messageType === 3)) {
+        mainWindow.webContents.send("ws-main-message", data)
+      }
+      if (meetingWindow) {
+        meetingWindow.webContents.send("ws-meeting-message", data)
+      }
+        break
       case 8: //好友申请
         mainWindow.webContents.send("ws-friend-apply", data)
+        break
+      case 11: // 切换摄像头状态
+        if (meetingWindow) {
+          meetingWindow.webContents.send("ws-meeting-message", data)
+        }
         break
       case 12: // 处理好友申请
         mainWindow.webContents.send("ws-friend-apply-handle", data)

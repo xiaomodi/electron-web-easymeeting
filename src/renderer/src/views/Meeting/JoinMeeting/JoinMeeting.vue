@@ -1,6 +1,6 @@
 <template>
   <div class="wrapper">
-    <div class="meeting_left_content_item" @mouseover="handleOnmouseOver('add')" @mouseleave="handleOnmouseLeave('add')" @click="handleClickJoinMeeting">
+    <div class="meeting_left_content_item" @mouseover="handleOnmouseOver" @mouseleave="handleOnmouseLeave" @click="handleClickJoinMeeting">
       <div class="meeting_left_content_item_icon">
         <img v-show="addAction" src="../iconfont/jiaruhuiyi1.png" alt="">
         <img v-show="!addAction" src="../iconfont/tengxunhuiyi.png" alt="">
@@ -12,28 +12,28 @@
         <div class="dialog_item">
           <div class="label necessary">会议号</div>
           <div class="content">
-            <el-input v-model="formData.meetingId" placeholder="请输入会议号" clearable/>
+            <el-input v-model.trim="formData.meetingNo" placeholder="请输入会议号" clearable/>
           </div>
         </div>
         <div class="dialog_item">
           <div class="label necessary">您的名称</div>
           <div class="content">
-            <el-input v-model="formData.meetingName" placeholder="请输入会议号" clearable/>
+            <el-input v-model="formData.nickName" placeholder="请输入会议号" clearable/>
           </div>
         </div>
         <div class="dialog_item">
           <div class="label">会议密码</div>
           <div class="content">
-            <el-radio-group v-model="formData.joinMeetingType">
+            <el-radio-group v-model="formData.joinType">
               <el-radio value="0">免密入会</el-radio>
               <el-radio value="1">密码入会</el-radio>
             </el-radio-group>
           </div>
         </div>
-         <div class="dialog_item" v-show="formData.joinMeetingType == '1'">
+         <div class="dialog_item" v-show="formData.joinType == '1'">
           <div class="label"></div>
           <div class="content">
-            <el-input v-model="formData.meetingPassword" placeholder="请输入会议密码" clearable/>
+            <el-input v-model="formData.joinPassword" placeholder="请输入会议密码" clearable/>
           </div>
         </div>
       </div>
@@ -46,35 +46,41 @@
 </template>
 
 <script lang='ts' setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, watchEffect } from 'vue'
 import { Dialog } from '@/components'
-
-interface FormData {
-  meetingId: string,
-  meetingName: string,
-  joinMeetingType: "0" | "1",
-  meetingPassword?: string,
-}
+import { preJoinMeeting, type JoinMeetingFormData } from '@/service/service'
+import { openMeetingWindow } from '../openMeetingWindow'
+import { getLocalStorage } from '@/utils/localStorage'
 
 const addAction = ref<boolean>(false)
 const joinMeetingDialog = ref<boolean>(false)
-const formData = reactive({
-  meetingId: "",
-  meetingName: "",
-  joinMeetingType: "0",
-  meetingPassword: "",
+const formData = reactive<JoinMeetingFormData>({
+  meetingNo: "",
+  nickName: "",
+  joinType: "0",
+  joinPassword: "",
+})
+
+watchEffect(() => {
+  if (joinMeetingDialog.value) {
+    initUserName()
+  }
 })
 
 const disabled = computed<boolean>(() => {
-  if(!formData.meetingId.length || !formData.meetingName.length) return true
+  if(!formData.meetingNo.length || !formData.nickName.length) return true
   return false
 })
 
-function handleOnmouseOver(item: string): void {
+function initUserName(): void {
+  formData.nickName = getLocalStorage("userInfo").nickName ?? ""
+}
+
+function handleOnmouseOver(): void {
   addAction.value = true;
 }
 
-function handleOnmouseLeave(item: string):void {
+function handleOnmouseLeave():void {
   addAction.value = false;
 }
 
@@ -83,7 +89,12 @@ function handleClickJoinMeeting(): void {
 }
 
 function handleClickJoinMeetingRoom():void {
-  joinMeetingDialog.value = false
+  preJoinMeeting(formData).then((res: any) => {
+    if(res && res.code === 200) {
+      joinMeetingDialog.value = false
+      openMeetingWindow()
+    }
+  })
 }
 
 function handleClearFormData(): void {

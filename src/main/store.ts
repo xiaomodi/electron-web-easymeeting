@@ -1,7 +1,8 @@
 // electron 主进程的 store 类似于pinia
 import ElectronStore from 'electron-store'
+const Store = ElectronStore.default
 
-const store = new ElectronStore();
+const store = new Store();
 
 let userId: string | null = null;
 

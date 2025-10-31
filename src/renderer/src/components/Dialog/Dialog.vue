@@ -73,6 +73,7 @@ function handleClickConfirm(): void {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+    padding: 0;
   }
   &:deep(.el-overlay ,el-modal-dialog) {
     -webkit-app-region: no-drag;
@@ -82,6 +83,13 @@ function handleClickConfirm(): void {
   }
   &:deep(.el-divider--horizontal) {
     margin: 0 0 10px 0;
+  }
+  &:deep(.el-dialog__title) {
+    display: block;
+    margin: 10px 0 0 10px;
+  }
+  &:deep(.el-dialog__footer) {
+    padding: 10px 15px;
   }
   .dialog_content {
     width: 100%;

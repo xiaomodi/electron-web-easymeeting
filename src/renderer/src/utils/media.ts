@@ -1,6 +1,6 @@
 import { ref, nextTick } from 'vue'
 
-type MediaStreamType = MediaStream | null
+export type MediaStreamType = MediaStream | null
 const stream = ref<MediaStreamType>(null)
 // 获取摄像头
 export const openCamera = async (): Promise<MediaStreamType> => {
@@ -17,6 +17,7 @@ export const stopCamera = (): Promise<null | string> => {
     if (stream.value) {
       stream.value.getTracks().forEach(track => {
         track.stop()
+        // track.enabled = false
       })
       stream.value = null
       resolve("success")
@@ -53,12 +54,8 @@ export const createEmptyAudioTrack = (): MediaStreamTrack => {
   return track
 }
 
-let cameraStream: MediaStreamType = null // 获取的摄像头流
-let screamStream: MediaStreamType = null // 获取的屏幕流(共享屏幕的流)
-
-
 // 变量定义
-// let cameraStream: MediaStreamType = null // 获取的摄像头流
+let cameraStream: MediaStreamType = null // 获取的摄像头流
 // let screamStream: MediaStreamType = null // 获取的屏幕流(共享屏幕的流)
 // let localStream: MediaStreamType = null // 本地流(最终页面上看到的流)
 
@@ -81,11 +78,18 @@ export const initStream = (micEnable: MediaDeviceInfo | null, cameraEnable: Medi
         localStream.addTrack(micTrack)
       }
       if (micEnable || cameraEnable) {
-        const isMicEnable: boolean = micEnable ? true : false
-        const isCameraEnable: boolean = cameraEnable ? true : false
-        const stream = await initLocalCameraStream(isMicEnable, isCameraEnable)
-        if (stream) {
-          stream.getTracks().forEach(track => { // getTracks()方法能同时返回音频轨道或声轨
+        // const isMicEnable: boolean = micEnable ? true : false
+        // const isCameraEnable: boolean = cameraEnable ? true : false
+        // // 老罗方法
+        // const stream = await initLocalCameraStream(isMicEnable, isCameraEnable)
+        // if (stream) {
+        //   stream.getTracks().forEach(track => { // getTracks()方法能同时返回音频轨道或声轨
+        //     track.enabled = false
+        //     localStream.addTrack(track)
+        //   })
+        // }
+        if (cameraEnable) {
+          cameraEnable.getTracks().forEach(track => { // getTracks()方法能同时返回音频轨道或声轨
             track.enabled = false
             localStream.addTrack(track)
           })
@@ -162,24 +166,30 @@ const initLocalCameraStream = (audio: boolean, video: boolean): Promise<MediaStr
   })
 }
 
-const initLocalScreenStream = (screenId: string): Promise<MediaStreamType> => {
+// 获取本地屏幕流
+export const initLocalScreenStream = (screenId: string): Promise<MediaStreamType> => {
   return new Promise(async (resolve, reject) => {
-    try {
-      const stream: MediaStreamType = await navigator.mediaDevices.getUserMedia({
-        audio: false, // 共享屏幕的时候不需要音频,应为本地流之前已经获取
+    try {      
+      const screenStream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
         video: {
-          width: {ideal: 1920, min: 1024},
-          height: {ideal: 1080, min: 768},
-          frameRate: {ideal: 25, min: 10},
-          displaySurface: "window",
-          deviceId: screenId
+          // Electron 特定的约束
+          // @ts-ignore - Electron 扩展属性
+          mandatory: {
+            chromeMediaSource: 'desktop',
+            chromeMediaSourceId: screenId,
+            minWidth: 1280,
+            minHeight: 720,
+            maxWidth: 1920,
+            maxHeight: 1080,
+            maxFrameRate: 15
+          }
         }
       })
-      screamStream = stream
-      resolve(stream)
+      resolve(screenStream)
     }catch(error) {
       console.log("获取屏幕共享失败", error)
-      reject(null)
+      reject(error)
     }
   })
 }

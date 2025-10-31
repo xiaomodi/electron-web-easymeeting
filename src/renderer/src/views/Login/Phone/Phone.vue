@@ -108,7 +108,7 @@ function handleClickIsLogin() {
 
 function handleClickLogin() {
   loginLoading.value = true
-  login(loginFormData).then(res => {
+  login({} as any).then(res => {
 
   }).catch(err => {
     setTimeout(() => {

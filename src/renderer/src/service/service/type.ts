@@ -44,3 +44,23 @@ export interface ContactsListData{
   nickName: string,
   onlineType: number
 }
+
+export interface JoinMeetingFormData {
+  meetingNo: string,
+  nickName: string,
+  joinType: "0" | "1",
+  joinPassword?: string,
+  screenId?: string
+}
+
+export interface UpdateUserInfo {
+  userId: string,
+  avatar: string,
+  nickName: string,
+  sex: number | string
+}
+
+export interface GetAvatar {
+  userId: string,
+  token: string
+}

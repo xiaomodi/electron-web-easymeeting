@@ -59,9 +59,9 @@ export const routerList: RouteRecordRaw[] = [
     ]
   },
   {
-    path: "/quickmeeting",
-    name: "QuickMeeting",
-    component: () => import("@/views/Meeting/QuickMeeting/QuickMeeting.vue")
+    path: "/meetingwindow",
+    name: "MeetingWindow",
+    component: () => import("@/views/Meeting/MeetingWindow/MeetingWindow.vue")
   }
 ]
 

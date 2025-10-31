@@ -46,7 +46,7 @@ import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowRight } from '@element-plus/icons-vue' 
 import JoinMeeting from './JoinMeeting/JoinMeeting.vue'
-import QuickMeeting from './QuickMeeting/QuickMeeting_Icon.vue'
+import QuickMeeting from './QuickMeeting/QuickMeeting.vue'
 import ShareScreenMeeting from './ShareScreenMeeting/ShareScreenMeeting.vue'
 
 const router = useRouter()

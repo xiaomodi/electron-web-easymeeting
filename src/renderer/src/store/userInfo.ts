@@ -5,20 +5,22 @@ import { setLocalStorage } from '@/utils/localStorage'
 export interface UserInfo {
   userId: string,
   nickName: string,
-  sex: number | string | null,
+  sex: number | string,
   token: string,
   meetingNo: string,
-  admin: boolean
+  admin: boolean,
+  userIcon: string
 }
 
 export const useUserInfoStore = defineStore("userInfo", () => {
   let userInfo = reactive<UserInfo>({
     "userId": "",
     "nickName": "",
-    "sex": null,
+    "sex": "",
     "token": "",
     "meetingNo": "",
-    "admin": false
+    "admin": false,
+    userIcon: ""
   })
 
   function getUserInfo(): UserInfo {
@@ -31,9 +33,14 @@ export const useUserInfoStore = defineStore("userInfo", () => {
     setLocalStorage('userInfo', userInfo)
   }
 
+  function setUserIcon(icon: string) {
+    userInfo.userIcon = icon
+  }
+
   return {
     userInfo,
     getUserInfo,
-    setUserInfo
+    setUserInfo,
+    setUserIcon
   }
 })

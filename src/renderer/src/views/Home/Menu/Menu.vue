@@ -1,14 +1,9 @@
 <template>
   <div class="Menu_wrapper">
     <div class="menu_top">
-      <el-badge
-        is-dot
-        offset="[-5, 0]"
-      >
-        <div class="menu_top_item user">
-          <img class="user_icon" src="./user_icon.png" alt="" />
-        </div>
-      </el-badge>
+      <div class="menu_top_item user" @click="handleClickUserIcon">
+        <Avatar :userInfo="userInfo"/>
+      </div>
       <div class="menu_top_item menu"
         v-for="item in menuList"
         :class="{ 'action': action === item.name}" 
@@ -18,7 +13,7 @@
             <component :is="item.icon" />
           </el-icon>
         </el-badge>
-        {{ item.name }}
+        {{ item.desc }}
       </div>
     </div>
     <div class="menu_bottom">
@@ -35,39 +30,99 @@
       </div>
     </div>
   </div>
+
+  <Dialog v-model="userInfoDialogVisible" title="修改用户信息" width="400" show-footer class="userInfo_dialog">
+    <div class="userInfo_content">
+      <div class="userInfo_item">
+        <p class="title top">UID</p>
+        <div class="body">{{ userInfo.userId }}</div>
+      </div>
+      <div class="userInfo_item">
+        <p class="title userIcon">头像</p>
+        <div class="body">
+          <Avatar :userInfo="userInfo" width="60px"/>
+          <div class="upload_btn">
+            <el-upload
+              :before-upload="beforeAvatarUpload"
+              :show-file-list="false"
+            >
+              <el-button type="primary">上传头像</el-button>
+            </el-upload>
+          </div>
+        </div>
+      </div>
+      <div class="userInfo_item">
+        <p class="title nickName">昵称</p>
+        <div class="body">
+          <el-input v-model="formData.nickName" clearable placeholder="请输入昵称" style="width: 100%"/>
+        </div>
+      </div>
+      <div class="userInfo_item">
+        <p class="title sex">性别</p>
+        <div class="body">
+          <el-radio-group v-model="formData.sex">
+            <el-radio :value="0">女</el-radio>
+            <el-radio :value="1">男</el-radio>
+            <el-radio :value="2">保密</el-radio>
+          </el-radio-group>
+        </div>
+      </div>
+    </div>
+    <el-divider />
+    <template #footer>
+      <el-button type="primary" @click="handleClickSubmit">确定</el-button>
+    </template>
+  </Dialog>
 </template>
 
 <script lang='ts' setup>
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { Message, Setting, User, VideoCamera, Memo, VideoPlay } from '@element-plus/icons-vue'
 import { useRouter, useRoute, type RouteRecordRaw } from 'vue-router'
 import Bus from '@/utils/eventBus'
 import { loadContactApplyDealWithCount } from '@/service/service'
+import { Avatar, Dialog } from '@/components'
+import { useUserInfoStore, type UserInfo } from '@/store/userInfo'
+import { getLocalStorage } from '@/utils/localStorage'
+import { ElMessage } from 'element-plus'
+import { updateUserInfo, getAvatar, type UpdateUserInfo, GetAvatar } from '@/service/service'
 
 interface MenuList {
   name: string,
+  desc: string,
   path: string,
   icon: any,
   value: number | string
 }
 const router = useRouter()
 const route = useRoute()
-const action = ref<string>("")
+const userInfoStore = useUserInfoStore()
+const action = ref<string>("Meeting")
+const userInfoDialogVisible = ref<boolean>(false)
+const formData = reactive<UpdateUserInfo>({
+  userId: userInfoStore.userInfo.userId,
+  avatar: "",
+  nickName: userInfoStore.userInfo.nickName,
+  sex: userInfoStore.userInfo.sex
+})
 const menuList = reactive<MenuList[]>([
   {
-    name: "会议",
+    name: "Meeting",
+    desc: "会议",
     path: "/meeting",
     icon: VideoCamera,
     value: ""
   },
   {
-    name: "通讯录",
+    name: "AddressBook",
+    desc: "通讯录",
     path: "/address_book",
     icon: Memo,
     value: ""
   },
   {
-    name: "录制",
+    name: "Record",
+    desc: "录制",
     path: "/record",
     icon: VideoPlay,
     value: ""
@@ -76,6 +131,7 @@ const menuList = reactive<MenuList[]>([
 
 onMounted(() => {
   getRoute()
+  getUserAvatar()
   getContactApplyDealWithCount()
 })
 
@@ -87,6 +143,8 @@ onUnmounted(() => {
 Bus.on("reloadContactsListAndCount", () => {
   getContactApplyDealWithCount()
 })
+
+const userInfo = computed<UserInfo>(() => userInfoStore.userInfo)
 
 function getContactApplyDealWithCount() {
   loadContactApplyDealWithCount().then((res: any) => {
@@ -101,6 +159,12 @@ function getRoute() {
   action.value = String(actionRoute ?? "")
 }
 
+function getUserAvatar() {
+  userInfoStore.userInfo.userIcon = userInfoStore.userInfo.userIcon ? 
+  userInfoStore.userInfo.userIcon : 
+  `${import.meta.env.VITE_BASE_URL}/file/getAvatar?userId=${getLocalStorage("userInfo").userId}&token=${getLocalStorage("userInfo").token}`
+}
+
 function handleClickMenuItem(item: any) {
   action.value = String(item.name ?? "")
   router.push(item.path)
@@ -110,6 +174,48 @@ function handleClickSetting(): void {
   action.value = 'Setting'
   router.push("/setting")
 }
+
+function handleClickUserIcon(): void {
+  userInfoDialogVisible.value = true
+}
+
+function beforeAvatarUpload(file): void {
+  const imgType = ["image/png", "image/jpeg", "image/jpg"]
+  const isImgType = imgType.includes(file.type);
+  const isLt2M = file.size / 1024 / 1024 < 2;
+
+  if (!isImgType) {
+    ElMessage.error('上传头像图片只能是 JPG 格式!');
+    return
+  }
+  if (!isLt2M) {
+    ElMessage.error('上传头像图片大小不能超过 2MB!');
+    return
+  }
+  formData.avatar = file
+  try{
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const url = event.target?.result as string
+      userInfoStore.setUserIcon(url)
+    }
+    reader.readAsDataURL(file)
+  } catch(error) {
+    console.log("上传图片失败！！！", error)
+  }
+}
+
+function handleClickSubmit() {
+  updateUserInfo(formData).then((res: any) => {
+    if (res && res.code === 200) {
+      ElMessage.success("用户信息修改成功！")
+      userInfoDialogVisible.value = false
+    } else {
+      ElMessage.error("用户信息修改失败！")
+    }
+  })
+}
+
 </script>
 
 <style lang="scss" scoped>
@@ -188,6 +294,65 @@ function handleClickSetting(): void {
         font-size: 10px;
         :deep(.el-icon) {
           font-size: 18px;
+        }
+      }
+    }
+  }
+}
+.userInfo_dialog {
+  &:deep(.el-divider--horizontal) {
+    margin: 0;
+  }
+}
+.userInfo_content {
+  width: 100%;
+  padding: 10px 35px;
+  box-sizing: border-box;
+  .userInfo_item {
+    width: 100%;
+    min-height: 35px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+    margin-bottom: 15px;
+    &:last-child {
+      margin-bottom: 3px;
+    }
+    .title {
+      margin-right: 18px;
+      letter-spacing: 1px;
+      &.userIcon {
+        height: 60px;
+        padding-top: 6px;
+      }
+      &.nickName:before {
+        content: "*";
+        color: red;
+        margin-right: 3px;
+        font-size: 8px;
+        vertical-align: top; /* 靠顶部对齐 */
+        display: inline-block;
+      }
+      &.sex:before {
+        content: "*";
+        color: red;
+        margin-right: 3px;
+        font-size: 8px;
+        vertical-align: top; /* 靠顶部对齐 */
+        display: inline-block;
+      }
+    }
+    .body {
+      flex: 1;
+      display: flex;
+      .upload_btn {
+        margin-left: 15px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        &:deep(.el-upload-list) {
+          margin: 0;
         }
       }
     }

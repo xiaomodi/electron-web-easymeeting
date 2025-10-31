@@ -27,7 +27,7 @@
 
 <script lang='ts' setup>
 import { ref, reactive, defineProps, withDefaults, defineEmits } from 'vue'
-import { Layout } from '../type' 
+import { Layout } from '../meeing_window_type' 
 import type { PopoverInstance } from 'element-plus'
 import { ClickOutside as vClickOutside } from 'element-plus'
 import { ArrowDown } from '@element-plus/icons-vue'

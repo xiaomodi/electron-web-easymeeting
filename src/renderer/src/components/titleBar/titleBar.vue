@@ -3,6 +3,7 @@
     <div class="titleItem">
       <div v-show="isShowTitleBar" class="content">
         <div v-if="close" class="icon_close" :class="{'blur': blur}" @click="handleClickClose"></div>
+        <div v-if="forceClose" class="icon_close" :class="{'blur': blur}" @click="handleClickClose"></div>
         <div v-if="min" class="icon_min" :class="{'blur': blur}"  @click.prevent="handleClickMin"></div>
         <div v-if="full" class="icon_max" :class="{'blur': blur}"  @click="handleClickFull"></div>
       </div>
@@ -10,7 +11,7 @@
     <div class="titleItem title">
       <div class="layout">
         <slot name="windowsLayout"></slot>
-      </div>
+      </div>  
       <div class="layout">
         {{ title }}
       </div>
@@ -24,13 +25,14 @@
 </template>
 
 <script lang='ts' setup>
-import { ref, reactive, defineProps, withDefaults, onMounted, onUnmounted } from 'vue'
+import { ref, defineExpose, defineProps, withDefaults, onMounted, onUnmounted } from 'vue'
 
 const props = withDefaults(defineProps<{
   min?: boolean,
   max?: boolean,
   full?: boolean,
   close?: boolean,
+  forceClose?: boolean,
   closeType?: number
   title?: string,
   isPosition?: boolean
@@ -38,7 +40,8 @@ const props = withDefaults(defineProps<{
   min: false,
   max: false,
   full: false,
-  close: false,
+  close: false, // 普通关闭
+  forceClose: false, // 是否需要强制关闭
   closeType: 0, // 0: 关闭 1: 隐藏
   title: "",
   isPosition: true
@@ -49,6 +52,11 @@ enum WindowType {
   MAX = 'maximize',
   FULL = 'fullscreen',
   CLOSE = 'close'
+}
+
+interface WindowControlType {
+  type: WindowType,
+  forceClose?: boolean
 }
 
 const blur = ref<boolean>(false)
@@ -87,21 +95,29 @@ function removeIpcrendererListener(): void {
   window.electron.ipcRenderer.removeAllListeners("window-fullscreen")
 }
 
-function handleWindowType(listen: string, type: string):void {
+function handleWindowType(listen: string, type: WindowControlType):void {
   window.electron.ipcRenderer.send(listen, type)
 }
 
 function handleClickClose(): void {
-  handleWindowType("window-control", WindowType.CLOSE)
+  handleWindowType("window-control", { type: WindowType.CLOSE })
+}
+
+function handleClickForceClose(): void {
+  handleWindowType("window-control", { type: WindowType.CLOSE, forceClose: true })
 }
 
 function handleClickMin(): void {
-  handleWindowType("window-control", WindowType.MIN)
+  handleWindowType("window-control", { type: WindowType.MIN })
 }
 
 function handleClickFull(): void {
-  handleWindowType("window-control", WindowType.FULL)
+  handleWindowType("window-control", { type: WindowType.FULL })
 }
+
+defineExpose({
+  handleClickForceClose
+})
 
 </script>
 

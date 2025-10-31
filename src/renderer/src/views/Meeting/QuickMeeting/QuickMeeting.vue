@@ -1,132 +1,182 @@
 <template>
-  <div class="quick_meet_wrapper">
-    <titleBar min full close title="会议详情">
-      <template #macLayout>
-        <MeetingHeader v-model="layoutType" :effect="effect"></MeetingHeader>
-      </template>
-    </titleBar>
-    <div class="body">
-      <layout-grid v-if="layoutType === Layout.GRID && Object.keys(baseInfo).length" ref="LayoutGridRef" :mumberList="mumberList" :baseInfo="baseInfo" :userInfo="userInfo" :screenId="screenId" />
-      <layout-top v-if="layoutType === Layout.TOP && Object.keys(baseInfo).length" :mumberList="mumberList" :baseInfo="baseInfo"></layout-top>
-      <layout-right v-if="layoutType === Layout.RIGHT && Object.keys(baseInfo).length" :mumberList="mumberList" :baseInfo="baseInfo"></layout-right>
+  <div class="wrapper">
+    <div
+      class="meeting_left_content_item" 
+      @mouseover="handleOnmouseOver()" 
+      @mouseleave="handleOnmouseLeave()" 
+      @click="handleClickQuickMeeting">
+      <div class="meeting_left_content_item_icon">
+        <img v-show="quickAction" src="../iconfont/kuaisuhuiyi1.png" style="width: 30px;" alt="">
+        <img v-show="!quickAction" src="../iconfont/jiaruhuiyi1.png" alt="">
+      </div>
+      快速会议
     </div>
-    <MeetingFooter v-model="footerActive" :baseInfo="baseInfo" @stopCamera="handleStopCamera" @openCamera="handleOpenCamera"></MeetingFooter>
+   <Dialog v-model="quickMeetingDialog" :close="handleClearFormData" :confirmBtnDisable="quickMeetForm.meetingName.length == 0" title="快速会议" width="400" showFooter @confirm="handleClickConfirm" @cancel="handleClearFormData">
+      <div class="quick_meeting_content">
+        <div class="meeting_content_item">
+          <p class="title top">会议号</p>
+          <div class="body">
+            <el-radio-group v-model="quickMeetForm.meetingNoType">
+              <el-radio value="0" size="default">使用个人会议号</el-radio>
+              <el-radio value="1" size="default">系统生成</el-radio>
+            </el-radio-group>
+            <el-input v-if="quickMeetForm.meetingNoType === '0'" v-model.trim="quickMeetForm.meetingNo" size="small" disabled clearable /> 
+          </div>
+        </div>
+        <div class="meeting_content_item">
+          <p class="title necessary top">会议主题</p>
+          <div class="body">
+            <el-input v-model="quickMeetForm.meetingName" type="textarea" size="small" clearable class="textarea" maxlength="100" show-word-limit/> 
+          </div>
+        </div>
+         <div class="meeting_content_item">
+          <p class="title top">入会密码</p>
+          <div class="body">
+            <el-radio-group v-model="quickMeetForm.joinType">
+              <el-radio value="0" size="default">无需密码</el-radio>
+              <el-radio value="1" size="default">密码入会</el-radio>
+            </el-radio-group>
+            <el-input v-if="quickMeetForm.joinType === '1'" v-model="quickMeetForm.joinPossword" size="small" clearable /> 
+          </div>
+        </div>
+      </div>
+      <el-divider />
+   </Dialog>
   </div>
+  
 </template>
 
 <script lang='ts' setup>
-import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { Layout, type BaseInfo, SettingFormData, ThemeType } from './type'
-import { openCamera, stopCamera } from '@/utils/media'
-import { useUserInfoStore, type UserInfo } from '@/store/userInfo'
-import { ElMessage } from 'element-plus'
-import titleBar from '@/components/titleBar/titleBar.vue'
-import LayoutGrid from './Layout/Layout-Grid.vue'
-import LayoutTop from './Layout/Layout-Top.vue'
-import LayoutRight from './Layout/Layout-Right.vue'
-import MeetingHeader from './components/Header.vue'
-import MeetingFooter from './components/Footer.vue'
+import { ref, reactive, watchEffect } from 'vue'
+import { openMeetingWindow } from '../openMeetingWindow'
+import { getLocalStorage } from '@/utils/localStorage'
+import { quickMeeting } from '@/service/service'
+import Dialog from '@/components/Dialog/Dialog.vue'
 
-const route = useRoute()
-const userInfoStore = useUserInfoStore()
-const init = ref<boolean>(false)
-const layoutType = ref<Layout>(Layout.GRID)
-const effect = ref<ThemeType>('light')
-const footerActive = ref<string>("")
-const baseInfo = ref<BaseInfo>({
-  micEnable: null,
-  cameraEnable: null,
-  micOpen: false,
-  cameraOpen: false,
-}) // 获取基础的配置信息
-const microphone = ref<MediaDeviceInfo | null>(null)
-const stream = ref<MediaStream | null>(null) // 获取摄像头信息
-const LayoutGridRef = ref<InstanceType<typeof LayoutGrid>>()
-const mumberList = ref<any[]>([])
+interface QuickMeetingForm {
+  meetingNoType: string,
+  meetingNo: string,
+  meetingName: string,
+  joinType: string,
+  joinPossword?: string
+}
+const quickMeetForm = reactive<QuickMeetingForm>({
+  meetingNoType: "0",
+  meetingNo: "",
+  meetingName: "",
+  joinType: "0",
+  joinPossword: ""
+})
+const quickAction = ref<boolean>(false);
+const quickMeetingDialog = ref<boolean>(false);
 
-onMounted(() => {
-  initEnv()
-  themeChanged()
+watchEffect(() => {
+  if (quickMeetingDialog.value && quickMeetForm.meetingNoType === '0') {
+    quickMeetForm.meetingNo = getLocalStorage("userInfo").meetingNo
+  }
 })
 
-onUnmounted(() => {
-  removeListener()
-})
-
-// 通过路由获取屏幕的id
-const screenId = computed<string>(() => (route.query.screenId) as string ?? "")
-const userInfo = computed<UserInfo>(() => userInfoStore.userInfo)
-
-async function initEnv() {
-  const sysSetting = await getSetting()   // 获取配置文件
-  if (sysSetting.openMicrophone) {
-    const devices = await navigator.mediaDevices.enumerateDevices()
-    microphone.value = devices.find(device => device.kind === 'audioinput') ?? null    // 首先需要获取麦克风
-  }
-  if (sysSetting.openVideo) {
-    // 获取摄像头
-    stream.value = await openCamera()
-  }
-  baseInfo.value = {
-    micEnable: microphone.value,
-    cameraEnable: stream.value,
-    micOpen: sysSetting.openMicrophone,
-    cameraOpen: sysSetting.openVideo,
-  }
+function handleOnmouseOver(): void {
+  quickAction.value = true
 }
 
-async function handleOpenCamera() {
-  stream.value = await openCamera()
-  if (stream.value && LayoutGridRef.value) {
-    baseInfo.value.cameraEnable = stream.value
-    LayoutGridRef.value.initVideo()
-    ElMessage({
-      message: '摄像头已开启！',
-      type: 'success'
-    })
-  }
+function handleOnmouseLeave(): void {
+ quickAction.value = false
 }
 
-function handleStopCamera() {
-  stopCamera().then(() => {
-    ElMessage({
-      message: '摄像头已关闭！',
-      type: 'success'
-    })
+function handleClickQuickMeeting(): void {
+  quickMeetingDialog.value = true
+}
+
+function handleClickConfirm(): void {
+  quickMeeting(quickMeetForm).then((res: any) => {
+    if (res && res.code === 200) {
+      openMeetingWindow("0")
+      quickMeetingDialog.value = false
+      handleClearFormData()
+    }
   })
 }
 
-async function getSetting(): Promise<SettingFormData> {
-  const settingData = await window.electron.ipcRenderer.invoke("setting-get")
-  effect.value = settingData.themeValue
-  return settingData
-}
-
-function themeChanged(): void {
-  window.electron.ipcRenderer.on("mainWindow-theme-changed", (e, theme) => {
-    document.documentElement.setAttribute('theme', theme)
-    effect.value = theme
+function handleClearFormData(): void {
+  Object.keys(quickMeetForm).forEach(key => {
+    if (key === 'meetingNoType' || key === 'joinType') {
+      quickMeetForm[key] = "0"
+    } else {
+      quickMeetForm[key] = ""
+    }
   })
-}
-
-function removeListener(): void {
-  window.electron.ipcRenderer.removeAllListeners('mainWindow-theme-changed')
 }
 
 </script>
 
-<style lang="scss" scoped>
-.quick_meet_wrapper {
-  width: 100vw;
-  height: 100vh;
+<style lang='scss' scoped>
+.wrapper {
+  &:deep(.el-divider--horizontal) {
+    margin: 0;
+  }
+}
+.meeting_left_content_item {
+  -webkit-app-region: no-drag;
+  height: 100px;
   display: flex;
   flex-direction: column;
-  .body {
+  align-items: center;
+  font-size: 14px;
+  overflow: hidden;
+  .meeting_left_content_item_icon {
+    width: 66px;
+    height: 66px;
+    border-radius: 15px;
+    background-color: var(--main-color);
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    img {
+      width: 37px;
+    }
+  }
+}
+.quick_meeting_content {
+  width: 100%;
+  padding: 12px 10px;
+  box-sizing: border-box;
+  .meeting_content_item {
     width: 100%;
-    flex: 1;
-    border: 1px solid var(--border-color-dark);
-    overflow: hidden;
+    display: flex;
+    margin-bottom: 10px;
+    &:last-child {
+      margin-bottom: 0;
+    }
+    .title {
+      width: 75px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      font-size: 14px;
+      &.necessary::before {
+        content: "*";
+        color: red;
+        margin-right: 3px;
+        font-size: 8px;
+      }
+      &.top {
+        align-items: flex-start;
+        padding-top: 6px;
+      }
+    }
+    .body {
+      flex: 1;
+      height: 100%;
+      margin-left: 20px;
+      .textarea {
+        height: 60px;
+        &:deep(.el-textarea__inner) {
+          height: 100%;
+        }
+      }
+    }
   }
 }
 </style>
